@@ -1,26 +1,25 @@
-# Sistem Manajemen Rumah Sakit (SMRS V1)
+# Sistem Manajemen Kamera (SMC V1)
 
-![Versi Laravel](https://img.shields.io/badge/Laravel-v12.x-FF2D20?style=for-the-badge&logo=laravel)
+![Versi Laravel](https://img.shields.io/badge/Laravel-v11.x-FF2D20?style=for-the-badge&logo=laravel)
 ![Versi PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php)
 [![Lisensi: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 <p align="center">
-  <img src="img/Dashboaord.png" alt="Logo Proyek" width="400"/>
+  <img src="https://placehold.co/600x300/293445/FFFFFF?text=Logo+Proyek+Kamera" alt="Logo Proyek" width="400"/>
 </p>
 
-Sistem Manajemen Rumah Sakit (SMRS) ini adalah aplikasi web komprehensif yang dibangun menggunakan Laravel untuk membantu mengelola berbagai aspek operasional klinik atau rumah sakit. Aplikasi ini dirancang untuk mendigitalkan proses, meningkatkan efisiensi, dan menyediakan data yang terpusat untuk pasien, dokter, dan staf administrasi.
+Sistem Manajemen Kamera (SMC) adalah aplikasi web komprehensif yang dibangun menggunakan Laravel untuk membantu memantau dan mengelola beberapa perangkat kamera berbasis IoT (seperti ESP32-CAM). Aplikasi ini dirancang untuk menyediakan platform terpusat untuk registrasi perangkat, melihat riwayat rekaman, dan mengelola akses pengguna.
 
 ---
 
 ## Daftar Isi
 
 1.  [Fitur Utama](#fitur-utama)
-2.  [Struktur Menu & Hak Akses per Peran](#struktur-menu--hak-akses-per-peran)
+2.  [Struktur Menu & Hak Akses](#struktur-menu--hak-akses)
 3.  [Teknologi yang Digunakan](#teknologi-yang-digunakan)
-4.  [Tangkapan Layar](#tangkapan-layar)
-5.  [Panduan Instalasi](#panduan-instalasi)
-6.  [Cara Penggunaan](#cara-penggunaan)
-7.  [Lisensi](#lisensi)
+4.  [Panduan Instalasi](#panduan-instalasi)
+5.  [Cara Penggunaan](#cara-penggunaan)
+6.  [Lisensi](#lisensi)
 
 ---
 
@@ -28,163 +27,76 @@ Sistem Manajemen Rumah Sakit (SMRS) ini adalah aplikasi web komprehensif yang di
 
 Berikut adalah penjelasan lebih detail mengenai fungsionalitas utama yang tersedia dalam sistem ini:
 
-- **Manajemen Pasien**:
+- **Dashboard Terpusat**:
 
-  - **Pendaftaran & Profil**: Staf dapat mendaftarkan pasien baru dengan data lengkap (nama, alamat, kontak, tanggal lahir, dll.). Setiap pasien memiliki profil yang dapat dilihat dan diperbarui.
-  - **Pencarian Cepat**: Memudahkan pencarian pasien berdasarkan nama, ID, atau nomor telepon untuk akses data yang cepat.
+  - **Statistik Cepat**: Menampilkan ringkasan data penting seperti jumlah total kamera, jumlah kamera yang aktif, dan total pengguna terdaftar.
+  - **Pratinjau Langsung**: Menampilkan _feed_ gambar terbaru dari setiap kamera yang aktif untuk pemantauan cepat.
 
-- **Manajemen Janji Temu (Appointment)**:
+- **Manajemen Perangkat Kamera**:
 
-  - **Penjadwalan**: Staf dapat membuat janji temu baru untuk pasien dengan dokter tertentu pada tanggal dan waktu yang spesifik.
-  - **Manajemen Status**: Melihat daftar janji temu harian/mingguan dan mengubah statusnya (misalnya, dari 'Tertunda' menjadi 'Dikonfirmasi' atau 'Selesai').
+  - **Registrasi Perangkat**: Admin dapat mendaftarkan perangkat kamera baru dan sistem akan secara otomatis menghasilkan `Device ID` dan `API Key` yang unik untuk otentikasi.
+  - **CRUD Kamera**: Kemampuan untuk menambah, melihat, mengedit (nama, deskripsi, status), dan menghapus perangkat kamera.
 
-- **Manajemen Staf & Dokter**:
+- **Riwayat Rekaman**:
 
-  - **Database Terpusat**: Admin dapat mengelola data semua karyawan dan dokter, termasuk informasi pribadi, kontak, dan departemen.
-  - **Spesialisasi & Jadwal**: Mengatur informasi spesifik dokter seperti spesialisasi, biaya konsultasi, dan hari kerja.
-
-- **Modul Faktur & Tagihan (Billing)**:
-
-  - **Pembuatan Faktur Dinamis**: Kemampuan untuk membuat tagihan untuk berbagai jenis transaksi, termasuk **OPD Invoice** (konsultasi dokter), **Service Bill** (tindakan medis), dan **Package Invoice** (paket tes lab).
-  - **Kalkulasi Otomatis**: Sistem secara otomatis menghitung subtotal, diskon, dan pajak berdasarkan pengaturan yang ada, meminimalkan kesalahan manual.
-
-- **Modul Laboratorium**:
-
-  - **Manajemen Master Tes**: Admin dapat menambah, mengedit, atau menonaktifkan jenis tes yang tersedia di laboratorium.
-  - **Pengelolaan Referensi**: Mengatur nilai rujukan normal, unit, dan parameter lain untuk setiap tes, memastikan hasil yang akurat.
-  - **Pembuatan Laporan**: Petugas lab dapat memasukkan hasil tes dan sistem akan menghasilkan laporan dalam format yang siap untuk dicetak atau dilihat oleh dokter.
-
-- **Sistem Pelaporan**:
-
-  - **Laporan Pendapatan**: Admin dapat melihat laporan pendapatan total berdasarkan rentang tanggal, pengguna (kasir), atau jenis layanan/faktur.
-  - **Filter Lanjutan**: Laporan dapat difilter untuk analisis yang lebih mendalam, membantu dalam pengambilan keputusan bisnis.
+  - **Penerimaan Gambar via API**: Memiliki _endpoint_ API khusus (`/api/upload`) untuk menerima kiriman gambar dari perangkat ESP32-CAM.
+  - **Penyimpanan Terstruktur**: Gambar disimpan dalam folder yang terorganisir berdasarkan `Device ID` dan tanggal (`YYYY-MM-DD`) untuk manajemen file yang mudah.
+  - **Penghapusan Otomatis**: Tugas terjadwal (`Scheduled Task`) untuk secara otomatis menghapus rekaman yang lebih tua dari 30 hari, menjaga agar penyimpanan tidak penuh.
+  - **Penelusuran Riwayat**: Antarmuka untuk menelusuri riwayat rekaman per kamera, dikelompokkan berdasarkan tanggal, dan melihat detail gambar per waktu.
 
 - **Manajemen Pengguna & Hak Akses**:
 
-  - **Berbasis Peran**: Menggunakan `spatie/laravel-permission`, Admin dapat membuat peran baru (Dokter, Perawat, Resepsionis, dll.) dan menetapkan izin spesifik untuk setiap menu.
-  - **Keamanan Akses**: Memastikan setiap pengguna hanya dapat melihat dan melakukan aksi yang sesuai dengan tanggung jawab pekerjaannya.
+  - **Berbasis Peran (RBAC)**: Menggunakan `spatie/laravel-permission`, Admin dapat membuat peran (misalnya, 'Admin', 'Viewer') dan menetapkan izin spesifik.
+  - **Keamanan Akses**: Memastikan setiap pengguna hanya dapat mengakses fitur dan data yang sesuai dengan perannya.
 
-- **Pengaturan Umum**:
-  - **Konfigurasi Sistem**: Halaman khusus untuk Admin mengkonfigurasi parameter dasar seperti nama rumah sakit, alamat, logo, dan persentase pajak yang berlaku untuk semua transaksi.
+- **Log & Notifikasi**:
+
+  - **Log Aktivitas**: Mencatat semua tindakan penting yang dilakukan oleh pengguna di dalam sistem untuk tujuan audit.
+  - **Sistem Peringatan**: Halaman khusus untuk menampilkan peringatan, seperti notifikasi kamera yang _offline_ (tidak mengirim data dalam interval waktu tertentu).
+
+- **Log Deteksi Machine Learning (Fitur Masa Depan)**:
+  - **Dasar untuk Pengembangan**: Fondasi telah disiapkan untuk mengintegrasikan model ML, dengan halaman log deteksi yang akan menampilkan gambar di mana objek berhasil diidentifikasi.
 
 ---
 
-## Struktur Menu & Hak Akses per Peran
+## Struktur Menu & Hak Akses
 
-Berikut adalah rincian menu yang dapat diakses oleh setiap peran utama dalam sistem. Peran **Admin** memiliki akses ke semua menu.
+Berikut adalah rincian menu yang dapat diakses oleh setiap peran utama. Peran **Admin** memiliki akses ke semua menu.
 
-### Peran: Dokter
+### Peran: Admin
 
-Fokus pada data klinis pasien dan jadwal pribadi.
+Memiliki kontrol penuh atas sistem, termasuk pengaturan dan manajemen pengguna.
 
-| Menu Utama    | Sub-Menu          | URL Path                                |
-| :------------ | :---------------- | :-------------------------------------- |
-| **Dashboard** | -                 | `/dashboard`                            |
-| **Patient**   | Patient Table     | `/dashboard/patient/patients`           |
-|               | Appointment Table | `/dashboard/patient/appointments`       |
-| **Lab Test**  | Examination Test  | `/dashboard/lab-test/examinations`      |
-|               | Hematologi Test   | `/dashboard/lab-test/haematology-test`  |
-|               | Microbiology Test | `/dashboard/lab-test/microbiology-test` |
-|               | Report            | `/dashboard/lab-test/reports`           |
-|               | Stain Test        | `/dashboard/lab-test/stain-tests`       |
+| Menu Utama           | Sub-Menu           | URL Path                         |
+| :------------------- | :----------------- | :------------------------------- |
+| **Dashboard**        | -                  | `/dashboard`                     |
+| **Manajemen Kamera** | -                  | `/dashboard/admin/cameras`       |
+| **Riwayat Rekaman**  | -                  | `/dashboard/log/history`         |
+| **Log Deteksi ML**   | -                  | `/dashboard/ml/detection-log`    |
+| **Log Aktivitas**    | -                  | `/dashboard/log/activities`      |
+| **Notifikasi**       | -                  | `/dashboard/admin/notifications` |
+| **Pengaturan**       | Manajemen Pengguna | `/dashboard/settings/users`      |
+|                      | Manajemen Peran    | `/dashboard/settings/roles`      |
 
-### Peran: Perawat
+### Peran: Viewer (Contoh)
 
-Fokus pada data pasien dan jadwal departemen.
+Hanya dapat melihat data, tidak dapat mengubah atau menghapus.
 
-| Menu Utama    | Sub-Menu          | URL Path                          |
-| :------------ | :---------------- | :-------------------------------- |
-| **Dashboard** | -                 | `/dashboard`                      |
-| **Patient**   | Patient Table     | `/dashboard/patient/patients`     |
-|               | Appointment Table | `/dashboard/patient/appointments` |
-| **Lab Test**  | Report            | `/dashboard/lab-test/reports`     |
-
-### Peran: Staf Administrasi / Resepsionis
-
-Fokus pada pendaftaran, penjadwalan, dan transaksi keuangan.
-
-| Menu Utama       | Sub-Menu          | URL Path                                         |
-| :--------------- | :---------------- | :----------------------------------------------- |
-| **Dashboard**    | -                 | `/dashboard`                                     |
-| **Patient**      | Patient Table     | `/dashboard/patient/patients`                    |
-|                  | Appointment Table | `/dashboard/patient/appointments`                |
-| **Report**       | OPD Reports       | `/dashboard/reports/opd`                         |
-|                  | Package Reports   | `/dashboard/reports/packages`                    |
-|                  | Service Reports   | `/dashboard/reports/service-report`              |
-| **Invoice/Bill** | All Report        | `/dashboard/invoice-bill/all-invoice-report`     |
-|                  | OPD Invoice       | `/dashboard/invoice-bill/opd-invoice/create`     |
-|                  | Package Invoice   | `/dashboard/invoice-bill/package-invoice/create` |
-|                  | Service Bill      | `/dashboard/invoice-bill/service-bill/create`    |
+| Menu Utama          | Sub-Menu | URL Path                 |
+| :------------------ | :------- | :----------------------- |
+| **Dashboard**       | -        | `/dashboard`             |
+| **Riwayat Rekaman** | -        | `/dashboard/log/history` |
 
 ---
 
 ## Teknologi yang Digunakan
 
-Berdasarkan file `composer.json` proyek ini, berikut adalah teknologi dan paket utama yang digunakan:
-
-- **Backend**: Laravel 12, PHP 8.2+
+- **Backend**: Laravel 11, PHP 8.2+
 - **Frontend**: Vite, Blade, Bootstrap 5, SASS, JavaScript
 - **Database**: MySQL / MariaDB
 - **Paket Utama**:
-  - `spatie/laravel-permission`: Untuk Manajemen Role & Hak Akses.
-  - `laravel/sanctum`: Untuk autentikasi API (jika digunakan).
-  - `barryvdh/laravel-dompdf` (disarankan): Untuk Generate PDF Laporan.
-
----
-
-## Tangkapan Layar
-
-### Dashboard
-
-![Gambar Dashboard](img/Dashboaord.png)
-
-### Modul Admin
-
-|                                  Departemen                                   |                                  Dokter                                   |
-| :---------------------------------------------------------------------------: | :-----------------------------------------------------------------------: |
-| ![Gambar Departemen](img/Admin/Screenshot%20from%202025-08-01%2014-14-43.png) | ![Gambar Dokter](img/Admin/Screenshot%20from%202025-08-01%2014-14-54.png) |
-|                                  **Pegawai**                                  |                                 **Paket**                                 |
-|  ![Gambar Pegawai](img/Admin/Screenshot%20from%202025-08-01%2014-15-05.png)   | ![Gambar Paket](img/Admin/Screenshot%20from%202025-08-01%2014-15-46.png)  |
-|                                  **Layanan**                                  |                                                                           |
-|  ![Gambar Layanan](img/Admin/Screenshot%20from%202025-08-01%2014-16-05.png)   |                                                                           |
-
-### Modul Pasien
-
-|                                   Tabel Pasien                                    |                                Tabel Janji Temu                                 |
-| :-------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------: |
-| ![Gambar Tabel Pasien](img/Patient/Screenshot%20from%202025-08-01%2014-23-38.png) | ![Gambar Janji Temu](img/Patient/Screenshot%20from%202025-08-01%2014-23-47.png) |
-
-### Modul Laporan
-
-|                                   Laporan OPD                                   |                                   Laporan Paket                                   |                                   Laporan Layanan                                   |
-| :-----------------------------------------------------------------------------: | :-------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------: |
-| ![Gambar Laporan OPD](img/Report/Screenshot%20from%202025-08-01%2014-24-22.png) | ![Gambar Laporan Paket](img/Report/Screenshot%20from%202025-08-01%2014-47-15.png) | ![Gambar Laporan Layanan](img/Report/Screenshot%20from%202025-08-01%2014-47-23.png) |
-
-### Modul Faktur / Tagihan
-
-|                                   Laporan Semua Faktur                                    |                                      Faktur OPD                                      |
-| :---------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------: |
-| ![Gambar Laporan Semua Faktur](img/Invoice/Screenshot%20from%202025-08-01%2014-47-50.png) |   ![Gambar Faktur OPD](img/Invoice/Screenshot%20from%202025-08-01%2014-48-12.png)    |
-|                                     **Faktur Paket**                                      |                                 **Tagihan Layanan**                                  |
-|     ![Gambar Faktur Paket](img/Invoice/Screenshot%20from%202025-08-01%2014-48-22.png)     | ![Gambar Tagihan Layanan](img/Invoice/Screenshot%20from%202025-08-01%2014-48-30.png) |
-
-### Modul Tes Lab
-
-|                                   Tes Pemeriksaan                                    |                                    Tes Hematologi                                     |
-| :----------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------: |
-| ![Gambar Tes Pemeriksaan](img/Labtest/Screenshot%20from%202025-08-01%2014-50-13.png) |  ![Gambar Tes Hematologi](img/Labtest/Screenshot%20from%202025-08-01%2014-50-24.png)  |
-|                                  **Manajemen Tes**                                   |                                 **Tes Mikrobiologi**                                  |
-|  ![Gambar Manajemen Tes](img/Labtest/Screenshot%20from%202025-08-01%2014-50-49.png)  | ![Gambar Tes Mikrobiologi](img/Labtest/Screenshot%20from%202025-08-01%2014-51-02.png) |
-|                                   **Laporan Lab**                                    |                                     **Tes Noda**                                      |
-|   ![Gambar Laporan Lab](img/Labtest/Screenshot%20from%202025-08-01%2014-51-11.png)   |     ![Gambar Tes Noda](img/Labtest/Screenshot%20from%202025-08-01%2014-51-21.png)     |
-|                                  **Referensi Tes**                                   |                                                                                       |
-|  ![Gambar Referensi Tes](img/Labtest/Screenshot%20from%202025-08-01%2014-51-31.png)  |                                                                                       |
-
-### Modul Pengaturan
-
-|                                    Manajemen Pengguna                                    |                                    Pengaturan RS                                    |                                    Manajemen Peran                                    |
-| :--------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------: |
-| ![Gambar Manajemen Pengguna](img/Settings/Screenshot%20from%202025-08-01%2014-51-55.png) | ![Gambar Pengaturan RS](img/Settings/Screenshot%20from%202025-08-01%2014-52-06.png) | ![Gambar Manajemen Peran](img/Settings/Screenshot%20from%202025-08-01%2014-52-19.png) |
+  - `spatie/laravel-permission`: Untuk Manajemen Peran & Hak Akses.
+  - `laravel/breeze`: Untuk sistem otentikasi.
 
 ---
 
@@ -204,8 +116,8 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di lingkungan lokal A
 1.  **Clone repository ini:**
 
     ```bash
-    git clone [https://github.com/aarspacetsd/smrs_v1.git](https://github.com/aarspacetsd/smrs_v1.git)
-    cd smrs_v1/SMRS_V1-backend
+    git clone [URL_REPOSITORY_ANDA]
+    cd [NAMA_FOLDER_PROYEK]
     ```
 
 2.  **Install dependensi PHP:**
@@ -237,20 +149,26 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di lingkungan lokal A
     ```
 
 7.  **Jalankan Migrasi Database:**
-    Perintah ini akan membuat semua tabel yang diperlukan di database Anda.
+    Perintah ini akan membuat semua tabel yang diperlukan, termasuk dari Spatie.
 
     ```bash
     php artisan migrate
     ```
 
 8.  **(Opsional) Jalankan Seeder:**
-    Jika Anda memiliki data awal (dummy data), jalankan seeder.
+    Jika Anda memiliki data awal, jalankan seeder.
 
     ```bash
     php artisan db:seed
     ```
 
-9.  **Compile Aset Frontend:**
+9.  **Buat Symbolic Link untuk Storage:**
+
+    ```bash
+    php artisan storage:link
+    ```
+
+10. **Compile Aset Frontend:**
     ```bash
     npm run dev
     ```
@@ -271,16 +189,13 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di lingkungan lokal A
     Buka browser dan kunjungi `http://127.0.0.1:8000`.
 
 3.  **Akun Default:**
-    Anda bisa login menggunakan akun default berikut (jika Anda menjalankan seeder):
+    Anda bisa login menggunakan akun yang Anda buat atau yang berasal dari seeder.
     - **Admin**:
       - Email: `admin@example.com`
-      - Password: `password`
-    - **Dokter**:
-      - Email: `doctor@example.com`
       - Password: `password`
 
 ---
 
 ## Lisensi
 
-Proyek ini dilisensikan di bawah Lisensi MIT. Lihat file `LICENSE` untuk detail lebih lanjut.
+Proyek ini dilisensikan di bawah Lisensi MIT.
