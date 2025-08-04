@@ -1,0 +1,95 @@
+{
+  "menu": [
+    {
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "url": "/dashboard",
+      "slug": "dashboard-home",
+      "role": [
+        "admin"
+      ]
+    },
+    {
+      "url": "#",
+      "icon": "menu-icon tf-icons ti ti-user",
+      "name": "Admin",
+      "slug": "admin",
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/admin/cameras",
+          "name": "Manage Camera",
+          "slug": "admin-Cameras"
+        },
+        {
+          "url": "/dashboard/admin/notifications",
+          "name": "Notifications",
+          "slug": "admin-Notifications"
+        }
+      ]
+    },
+    {
+      "url": "#",
+      "name": "ML",
+      "icon": "menu-icon tf-icons ti ti-users-group",
+      "slug": "Ml",
+      "target": "_blank",
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/ml/detection-log",
+          "name": "Log Deteksi",
+          "slug": "detection-log"
+        }
+      ]
+    },
+    {
+      "url": "#",
+      "name": "Log",
+      "icon": "menu-icon tf-icons ti ti-file-type-pdf",
+      "slug": "Log",
+      "target": "_blank",
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/log/history",
+          "name": "Riwayat Rekaman",
+          "slug": "Riwayat Rekaman"
+        },
+        {
+          "url": "/dashboard/log/activities",
+          "name": "Log Aktifitas",
+          "slug": "Log Aktifitas"
+        }
+      ]
+    },
+    {
+      "url": "#",
+      "name": "Setting",
+      "icon": "menu-icon tf-icons ti ti-settings",
+      "slug": "settings",
+      "target": "_blank",
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/settings/users",
+          "name": "Manage User",
+          "slug": "settings-users"
+        },
+        {
+          "url": "/dashboard/settings/roles",
+          "name": "Manage Role",
+          "slug": "settings-roles"
+        }
+      ]
+    }
+  ]
+}
