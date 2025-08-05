@@ -2,6 +2,34 @@
 
 @section('title', 'Riwayat Kamera - ' . $camera->name)
 
+@section('page-style')
+    <style>
+        /* Fix untuk container scroll */
+        .folder-list-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        /* Fix untuk list item hover */
+        .list-group-item-action:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Fix untuk pagination alignment */
+        .pagination {
+            margin-bottom: 0;
+            justify-content: center !important;
+        }
+
+        /* Fix untuk responsive */
+        @media (max-width: 768px) {
+            .folder-list-container {
+                max-height: 50vh;
+            }
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <div>
@@ -16,28 +44,35 @@
 
     <div class="card">
         <h5 class="card-header">Arsip Rekaman Tersimpan</h5>
-        <div class="list-group list-group-flush">
-            @forelse($dates as $record)
-                <a href="{{ route('log.history.images', ['camera' => $camera->id, 'date' => $record->date]) }}"
-                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <i class="ti ti-folder-filled ti-lg me-3 text-warning"></i>
-                        <div class="d-flex flex-column">
-                            <h6 class="mb-0">{{ \Carbon\Carbon::parse($record->date)->translatedFormat('l, j F Y') }}</h6>
+
+        <div class="folder-list-container">
+            <div class="list-group list-group-flush">
+                @forelse($dates as $record)
+                    <a href="{{ route('log.history.images', ['camera' => $camera->id, 'date' => $record->date]) }}"
+                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <i class="ti ti-folder-filled ti-lg me-3 text-warning"></i>
+                            <div class="d-flex flex-column">
+                                <h6 class="mb-0">{{ \Carbon\Carbon::parse($record->date)->translatedFormat('l, j F Y') }}
+                                </h6>
+                            </div>
                         </div>
+                        <span class="badge bg-label-primary rounded-pill">
+                            Lihat Rekaman
+                            <i class="ti ti-chevron-right ms-1 ti-xs"></i>
+                        </span>
+                    </a>
+                @empty
+                    <div class="list-group-item text-center">
+                        <p class="text-muted my-3">Belum ada rekaman yang tersimpan untuk kamera ini.</p>
                     </div>
-                    <span class="badge bg-label-primary rounded-pill">Lihat Rekaman <i
-                            class="ti ti-chevron-right ms-1 ti-xs"></i></span>
-                </a>
-            @empty
-                <div class="list-group-item text-center">
-                    <p class="text-muted my-3">Belum ada rekaman yang tersimpan untuk kamera ini.</p>
-                </div>
-            @endforelse
+                @endforelse
+            </div>
         </div>
+
         @if ($dates->hasPages())
-            <div class="card-footer">
-                {{ $dates->links() }}
+            <div class="card-footer d-flex justify-content-center">
+                {{ $dates->appends(request()->query())->links() }}
             </div>
         @endif
     </div>
