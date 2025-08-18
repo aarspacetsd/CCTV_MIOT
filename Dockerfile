@@ -18,7 +18,7 @@ COPY package.json package.json
 COPY package-lock.json package-lock.json
 COPY vite.config.js vite.config.js
 COPY tailwind.config.js tailwind.config.js
-COPY postcss.config.js postcss.config.js
+# COPY postcss.config.js postcss.config.js
 COPY resources/ resources/
 RUN npm install && npm run build
 
