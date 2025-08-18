@@ -23,6 +23,7 @@ class Camera extends Model
     'description',
     'api_key',
     'is_active',
+    'websocket_channel_id', // <-- Tambahkan baris ini
   ];
 
   /**

@@ -16,7 +16,6 @@ class ManajemenKameraController extends Controller
   public function index()
   {
     $cameras = Auth::user()->cameras()->latest()->paginate(10);
-    // Mengirimkan variabel 'view' => 'index' untuk logika di Blade
     return view('content.pages.admin.Manajemen_Kamera', [
       'view' => 'index',
       'cameras' => $cameras
@@ -28,7 +27,6 @@ class ManajemenKameraController extends Controller
    */
   public function create()
   {
-    // Mengirimkan variabel 'view' => 'create'
     return view('content.pages.admin.Manajemen_Kamera', ['view' => 'create']);
   }
 
@@ -37,21 +35,23 @@ class ManajemenKameraController extends Controller
    */
   public function store(Request $request)
   {
+    $this->authorize('create', Camera::class);
+
     $request->validate([
       'name' => 'required|string|max:255',
       'description' => 'nullable|string',
     ]);
 
-    $camera = Auth::user()->cameras()->create([
-      'device_id' => Str::uuid(),
-      'name' => $request->name,
-      'description' => $request->description,
-      'api_key' => Str::random(60),
-    ]);
+    // FIX: Buat objek Camera secara manual untuk memastikan user_id diatur.
+    $camera = new Camera();
+    $camera->fill($request->only('name', 'description')); // Isi nama dan deskripsi
+    $camera->user_id = Auth::id(); // Atur user_id secara eksplisit
+    $camera->device_id = Str::uuid();
+    $camera->api_key = Str::random(60);
+    $camera->websocket_channel_id = 'camera-status-' . Str::random(16);
+    $camera->save(); // Simpan model ke database
 
-    // Redirect ke halaman edit, yang akan menampilkan form edit
-    // dan juga informasi kamera baru.
-    return redirect()->route('cameras.edit', $camera->id)
+    return redirect()->route('admin.cameras.edit', $camera->id)
       ->with('success', 'Kamera berhasil didaftarkan!')
       ->with('newCamera', $camera);
   }
@@ -62,7 +62,6 @@ class ManajemenKameraController extends Controller
   public function edit(Camera $camera)
   {
     $this->authorize('update', $camera);
-    // Mengirimkan variabel 'view' => 'edit'
     return view('content.pages.admin.Manajemen_Kamera', [
       'view' => 'edit',
       'camera' => $camera
@@ -84,8 +83,8 @@ class ManajemenKameraController extends Controller
 
     $camera->update($request->all());
 
-    // Redirect kembali ke halaman index (daftar kamera)
-    return redirect()->route('cameras.index')->with('success', 'Data kamera berhasil diperbarui.');
+    // FIX: Menggunakan nama route yang benar
+    return redirect()->route('admin.cameras.index')->with('success', 'Data kamera berhasil diperbarui.');
   }
 
   /**
@@ -97,6 +96,7 @@ class ManajemenKameraController extends Controller
 
     $camera->delete();
 
-    return redirect()->route('cameras.index')->with('success', 'Kamera berhasil dihapus.');
+    // FIX: Menggunakan nama route yang benar
+    return redirect()->route('admin.cameras.index')->with('success', 'Kamera berhasil dihapus.');
   }
 }

@@ -2,133 +2,132 @@
 
 @section('title', 'Detail Rekaman - ' . \Carbon\Carbon::parse($formattedDate)->format('j M Y'))
 
-@section('page-style')
-    <style>
-        /* Layout flexbox untuk card yang sama tinggi */
-        .image-list-card {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .image-list-container {
-            flex-grow: 1;
-            overflow-y: auto;
-            max-height: 400px;
-            /* Batasi tinggi untuk mencegah overflow */
-        }
-
-        .list-group-item.active {
-            background-color: #e7e7ff;
-            border-color: #e7e7ff;
-            color: #7367f0;
-        }
-
-        .list-group-item:hover {
-            background-color: #f8f9fa;
-            cursor: pointer;
-        }
-
-        #image-viewer-placeholder {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            min-height: 400px;
-            background-color: #f8f7fa;
-            border-radius: 0.375rem;
-            border: 2px dashed #d9d7e8;
-            color: #a8a4c1;
-        }
-
-        #image-viewer-display {
-            display: none;
-        }
-
-        /* Fix untuk pagination */
-        .pagination {
-            margin-bottom: 0;
-            justify-content: center;
-        }
-
-        .pagination .page-link {
-            color: #7367f0;
-        }
-
-        .pagination .page-item.active .page-link {
-            background-color: #7367f0;
-            border-color: #7367f0;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 991.98px) {
-            .image-list-container {
-                max-height: 300px;
-            }
-
-            #image-viewer-placeholder {
-                min-height: 300px;
-            }
-        }
-
-        /* Fix untuk image viewer */
-        #image-viewer-display-img {
-            max-height: 500px;
-            object-fit: contain;
-            background-color: #f8f9fa;
-        }
-    </style>
+{{-- Vendor Styles --}}
+@section('vendor-style')
+    @vite(['resources/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.scss', 'resources/assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.scss', 'resources/assets/vendor/libs/datatables-buttons-bs5/buttons.bootstrap5.scss', 'resources/assets/vendor/libs/datatables-rowgroup-bs5/rowgroup.bootstrap5.scss'])
 @endsection
 
+{{-- Vendor Scripts --}}
+@section('vendor-script')
+    @vite(['resources/assets/vendor/libs/jquery/jquery.js', 'resources/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js'])
+@endsection
+
+{{-- Page Scripts --}}
 @section('page-script')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const imageListViewer = document.getElementById('image-viewer-display-img');
-            const imageViewerTimestamp = document.getElementById('image-viewer-timestamp');
-            const placeholder = document.getElementById('image-viewer-placeholder');
-            const imageViewerDisplay = document.getElementById('image-viewer-display');
-            const listItems = document.querySelectorAll('.image-list-item');
+        // Gunakan event listener 'load' untuk memastikan semua skrip (termasuk jQuery) sudah dimuat
+        window.addEventListener('load', function() {
+            $(function() {
+                // URL untuk mengambil data dari controller
+                const dataUrl =
+                    "{{ route('log.history.data', ['camera' => $camera->id, 'date' => $formattedDate]) }}";
 
-            // Function untuk menampilkan gambar
-            function showImage(item) {
-                // Remove active class dari semua item
-                listItems.forEach(i => i.classList.remove('active'));
+                // Inisialisasi DataTable
+                var dt_basic = $('.datatables-basic').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    ajax: dataUrl,
+                    columns: [{
+                            data: 'id',
+                            name: 'id',
+                            visible: false
+                        },
+                        // Kolom baru untuk data grouping, akan disembunyikan
+                        {
+                            data: 'group_hour',
+                            name: 'group_hour',
+                            visible: false
+                        },
+                        {
+                            data: 'path',
+                            name: 'path',
+                            title: 'Pratinjau',
+                            orderable: false,
+                            searchable: false,
+                            render: function(data, type, full, meta) {
+                                return '<img src="' + data +
+                                    '" alt="Pratinjau" class="img-thumbnail" style="width: 100px; height: 60px; object-fit: cover;">';
+                            }
+                        },
+                        {
+                            data: 'time',
+                            name: 'captured_at',
+                            title: 'Waktu Rekaman'
+                        },
+                        {
+                            data: 'action',
+                            name: 'action',
+                            title: 'Aksi',
+                            orderable: false,
+                            searchable: false,
+                            render: function(data, type, full, meta) {
+                                return '<button class="btn btn-sm btn-outline-primary btn-view-image" data-img-src="' +
+                                    full.full_path + '" data-timestamp="' + full.time +
+                                    '">Lihat</button>';
+                            }
+                        }
+                    ],
+                    // Urutkan berdasarkan grup jam, lalu berdasarkan waktu
+                    order: [
+                        [1, 'asc'],
+                        [0, 'desc']
+                    ],
+                    // Aktifkan Row Grouping
+                    rowGroup: {
+                        dataSrc: 'group_hour'
+                    },
+                    dom: '<"card-header flex-column flex-md-row"<"head-label text-center"><"dt-action-buttons text-end pt-3 pt-md-0"B>><"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                    displayLength: 25,
+                    lengthMenu: [10, 25, 50, 100],
+                    buttons: [{
+                        extend: 'collection',
+                        className: 'btn btn-label-primary dropdown-toggle me-2',
+                        text: '<i class="ti ti-file-export me-sm-1"></i> <span class="d-none d-sm-inline-block">Export</span>',
+                        buttons: [{
+                                extend: 'print',
+                                className: 'dropdown-item'
+                            },
+                            {
+                                extend: 'csv',
+                                className: 'dropdown-item'
+                            },
+                            {
+                                extend: 'excel',
+                                className: 'dropdown-item'
+                            },
+                            {
+                                extend: 'pdf',
+                                className: 'dropdown-item'
+                            },
+                            {
+                                extend: 'copy',
+                                className: 'dropdown-item'
+                            }
+                        ]
+                    }],
+                    language: {
+                        search: "Cari:",
+                        lengthMenu: "_MENU_",
+                        info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ rekaman",
+                        paginate: {
+                            first: "Awal",
+                            last: "Akhir",
+                            next: "Berikutnya",
+                            previous: "Sebelumnya"
+                        }
+                    }
+                });
+                $('div.head-label').html('<h5 class="card-title mb-0">Daftar Rekaman</h5>');
 
-                // Add active class ke item yang diklik
-                item.classList.add('active');
-
-                // Get data dari item
-                const imageUrl = item.getAttribute('data-img-src');
-                const timestamp = item.getAttribute('data-timestamp');
-
-                // Hide placeholder dan show image viewer
-                placeholder.style.display = 'none';
-                imageViewerDisplay.style.display = 'block';
-
-                // Set image source dan timestamp
-                imageListViewer.src = imageUrl;
-                imageViewerTimestamp.textContent = timestamp;
-
-                // Handle image load error
-                imageListViewer.onerror = function() {
-                    this.src = '/images/placeholder.png'; // Fallback image
-                    console.error('Failed to load image:', imageUrl);
-                };
-            }
-
-            // Add click event listener ke setiap item
-            listItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    showImage(this);
+                // Event listener untuk tombol "Lihat"
+                $('.datatables-basic tbody').on('click', '.btn-view-image', function() {
+                    var imgSrc = $(this).data('img-src');
+                    var timestamp = $(this).data('timestamp');
+                    $('#modalImage').attr('src', imgSrc);
+                    $('#imageModalLabel').text('Pratinjau Rekaman: ' + timestamp + ' WIB');
+                    $('#imageModal').modal('show');
                 });
             });
-
-            // Auto-select first item jika ada
-            if (listItems.length > 0) {
-                // Uncomment baris berikut jika ingin auto-select item pertama
-                // showImage(listItems[0]);
-            }
         });
     </script>
 @endsection
@@ -145,71 +144,25 @@
         </a>
     </div>
 
-    <div class="row g-4">
-        <!-- Left Column - Image List -->
-        <div class="col-lg-4 col-xl-3">
-            <div class="card image-list-card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Daftar Rekaman</h5>
-                    <small class="text-muted">{{ $images->total() }} item</small>
-                </div>
-                <div class="image-list-container">
-                    <div class="list-group list-group-flush">
-                        @forelse($images as $image)
-                            <a href="#"
-                                class="list-group-item list-group-item-action image-list-item d-flex align-items-center"
-                                data-img-src="{{ \Illuminate\Support\Facades\Storage::url($image->path) }}"
-                                data-timestamp="{{ $image->captured_at->format('H:i:s') }} WIB">
-                                <i class="ti ti-photo me-2 text-primary"></i>
-                                <div>
-                                    <div class="fw-medium">{{ $image->captured_at->format('H:i:s') }}</div>
-                                    <small class="text-muted">{{ $image->captured_at->format('d/m/Y') }}</small>
-                                </div>
-                            </a>
-                        @empty
-                            <div class="list-group-item text-center py-4">
-                                <i class="ti ti-camera-off ti-lg text-muted mb-2"></i>
-                                <p class="text-muted mb-0">Tidak ada gambar pada tanggal ini.</p>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-
-                <!-- Pagination -->
-                @if ($images->hasPages())
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-center">
-                            {{ $images->appends(request()->query())->links('pagination::bootstrap-4') }}
-                        </div>
-                    </div>
-                @endif
-            </div>
+    <!-- DataTable with Buttons -->
+    <div class="card">
+        <div class="card-datatable table-responsive pt-0">
+            <table class="datatables-basic table">
+                {{-- Header tabel akan dibuat oleh JavaScript --}}
+            </table>
         </div>
+    </div>
 
-        <!-- Right Column - Image Viewer -->
-        <div class="col-lg-8 col-xl-9">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <!-- Placeholder -->
-                    <div id="image-viewer-placeholder">
-                        <div class="text-center">
-                            <i class="ti ti-photo-search" style="font-size: 3rem;" class="mb-3 text-muted"></i>
-                            <h5 class="text-muted">Pilih Rekaman</h5>
-                            <p class="text-muted mb-0">Pilih item dari daftar di samping untuk melihat gambar.</p>
-                        </div>
-                    </div>
-
-                    <!-- Image Display -->
-                    <div id="image-viewer-display" class="flex-grow-1 d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0">Pratinjau Rekaman</h5>
-                            <small class="text-muted" id="image-viewer-timestamp"></small>
-                        </div>
-                        <div class="flex-grow-1 d-flex align-items-center justify-content-center">
-                            <img id="image-viewer-display-img" src="" class="img-fluid rounded shadow-sm"
-                                alt="Pratinjau Gambar" style="max-width: 100%; max-height: 100%;">
-                        </div>
-                    </div>
+    <!-- Modal untuk menampilkan gambar -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalLabel">Pratinjau Rekaman</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modalImage" src="" class="img-fluid rounded" alt="Gambar Ukuran Penuh">
                 </div>
             </div>
         </div>

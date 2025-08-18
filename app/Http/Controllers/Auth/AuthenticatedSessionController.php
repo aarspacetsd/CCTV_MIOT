@@ -16,24 +16,13 @@ class AuthenticatedSessionController extends Controller
    */
   public function create(): View
   {
-    // return view('auth.login');
-    $pageConfigs = ['layout' => 'blank']; // Pakai layout blank untuk halaman login
+    $pageConfigs = ['layout' => 'blank'];
     return view('auth.login', compact('pageConfigs'));
   }
 
   /**
    * Handle an incoming authentication request.
    */
-  // public function store(LoginRequest $request): RedirectResponse
-  // {
-  //     $request->authenticate();
-
-  //     $request->session()->regenerate();
-
-  //     return redirect()->intended(route('dashboard', absolute: false));
-  // }
-
-
   public function store(Request $request): RedirectResponse
   {
     $request->validate([
@@ -44,18 +33,18 @@ class AuthenticatedSessionController extends Controller
     if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
       $request->session()->regenerate();
 
-      // Cek role dan redirect sesuai
       $user = Auth::user();
+
+      // Cek peran dan arahkan ke dashboard yang sesuai
       if ($user->hasRole('admin')) {
         return redirect()->route('dashboard.index');
-      } elseif ($user->hasRole('perawat')) {
-        return redirect()->route('dashboard.index');
       } elseif ($user->hasRole('user')) {
-        return redirect()->route('dashboard.index');
+        // Arahkan pengguna dengan peran 'user' ke dashboard pengguna
+        return redirect()->route('user.dashboard');
       }
 
-      // Default fallback
-      return redirect('/');
+      // Fallback default untuk peran lain
+      return redirect()->route('dashboard.index');
     }
 
     return back()->withErrors([
@@ -63,18 +52,14 @@ class AuthenticatedSessionController extends Controller
     ]);
   }
 
-
   /**
    * Destroy an authenticated session.
    */
   public function destroy(Request $request): RedirectResponse
   {
     Auth::guard('web')->logout();
-
     $request->session()->invalidate();
-
     $request->session()->regenerateToken();
-
     return redirect('/');
   }
 }

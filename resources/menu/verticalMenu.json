@@ -4,9 +4,18 @@
       "name": "Dashboard",
       "icon": "menu-icon tf-icons ti ti-smart-home",
       "url": "/dashboard",
-      "slug": "dashboard-home",
+      "slug": "dashboard-admin",
       "role": [
         "admin"
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "url": "/dashboard/user/dashboard",
+      "slug": "dashboard-user",
+      "role": [
+        "user"
       ]
     },
     {
@@ -21,12 +30,12 @@
         {
           "url": "/dashboard/admin/cameras",
           "name": "Manage Camera",
-          "slug": "admin-Cameras"
+          "slug": "admin-cameras"
         },
         {
           "url": "/dashboard/admin/notifications",
           "name": "Notifications",
-          "slug": "admin-Notifications"
+          "slug": "admin-notifications"
         }
       ]
     },
@@ -34,7 +43,7 @@
       "url": "#",
       "name": "ML",
       "icon": "menu-icon tf-icons ti ti-users-group",
-      "slug": "Ml",
+      "slug": "ml",
       "target": "_blank",
       "role": [
         "admin"
@@ -51,21 +60,22 @@
       "url": "#",
       "name": "Log",
       "icon": "menu-icon tf-icons ti ti-file-type-pdf",
-      "slug": "Log",
+      "slug": "log",
       "target": "_blank",
       "role": [
-        "admin"
+        "admin",
+        "user"
       ],
       "submenu": [
         {
           "url": "/dashboard/log/history",
           "name": "Riwayat Rekaman",
-          "slug": "Riwayat Rekaman"
+          "slug": "riwayat-rekaman"
         },
         {
           "url": "/dashboard/log/activities",
           "name": "Log Aktifitas",
-          "slug": "Log Aktifitas"
+          "slug": "log-aktifitas"
         }
       ]
     },
@@ -88,6 +98,28 @@
           "url": "/dashboard/settings/roles",
           "name": "Manage Role",
           "slug": "settings-roles"
+        }
+      ]
+    },
+    {
+      "url": "#",
+      "name": "Device",
+      "icon": "menu-icon tf-icons ti ti-users-group",
+      "slug": "device-camera",
+      "target": "_blank",
+      "role": [
+        "user"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/user/cameras/link",
+          "name": "Add Device",
+          "slug": "add-device"
+        },
+        {
+          "url": "/dashboard/user/my-cameras",
+          "name": "Device List",
+          "slug": "device-list"
         }
       ]
     }

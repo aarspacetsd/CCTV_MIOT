@@ -3,7 +3,7 @@
 return [
   "creatorName" => "Ahmad Akmal Rijal",
   "creatorUrl" => "https://aarspace.com",
-  "templateName" => "SMRS_V1",
+  "templateName" => "SMC V1",
   "templateSuffix" => "Bootstrap Admin Template",
   "templateVersion" => "2.0.0",
   "templateFree" => false,

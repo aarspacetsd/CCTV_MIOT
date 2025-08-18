@@ -14,14 +14,12 @@
         <h5 class="card-header">Pilih Kamera</h5>
         <div class="list-group list-group-flush">
             @forelse($cameras as $camera)
-                {{-- Tautan ini akan mengarah ke halaman folder untuk kamera yang dipilih --}}
                 <a href="{{ route('log.history.folders', $camera->id) }}"
                     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
                         <i class="ti ti-camera ti-lg me-3 text-primary"></i>
                         <div class="d-flex flex-column">
                             <h6 class="mb-0">{{ $camera->name }}</h6>
-                            {{-- FIX: Menggunakan namespace lengkap untuk fasad Str --}}
                             <small class="text-muted">Device ID:
                                 {{ \Illuminate\Support\Str::limit($camera->device_id, 13) }}...</small>
                         </div>
