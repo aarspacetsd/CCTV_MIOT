@@ -31,7 +31,7 @@ services:
     container_name: laravel_nginx
     restart: unless-stopped
     ports:
-      - "8000:80" # Akses aplikasi dari luar melalui port 8000
+      - "8004:80" # Akses aplikasi dari luar melalui port 8000
     volumes:
       - .:/var/www/html
       # PERUBAHAN: Mount seluruh direktori konfigurasi, bukan hanya satu file.
