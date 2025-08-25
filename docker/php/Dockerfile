@@ -2,11 +2,8 @@ FROM php:8.2-fpm
 
 # System deps - Tambahkan Node.js dan NPM untuk build aset frontend
 RUN apt-get update && apt-get install -y ca-certificates curl gnupg \
-  && . /etc/os-release \
-  && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-  && NODE_MAJOR=20 \
-  && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x $VERSION_CODENAME main" | tee /etc/apt/sources.list.d/nodesource.list \
-  && apt-get update && apt-get install -y \
+  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y \
   git unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libicu-dev \
   libxml2-dev libssl-dev libpq-dev zlib1g-dev libcurl4-openssl-dev netcat \
   nodejs \
