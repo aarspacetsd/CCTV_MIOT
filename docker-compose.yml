@@ -22,6 +22,7 @@ services:
     image: aarcsti/cctv-miot-app:latest
     working_dir: /var/www/html
     environment:
+      APP_KEY:"base64:JATe/JyiyMJmL26D/TQ26lfU/1bUlakRsPmXWDv761k="
       APP_ENV: production
       APP_DEBUG: "false"
       DB_CONNECTION: mysql
