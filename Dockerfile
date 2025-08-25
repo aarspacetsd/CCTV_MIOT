@@ -5,14 +5,14 @@
 FROM php:8.2-fpm
 
 # Set working directory
-WORKDIR /var/www/html
+WORKDIR /var/w ww/html
 
 # Instalasi dependensi sistem yang dibutuhkan oleh Laravel
-# MENAMBAHKAN netcat untuk health check database
+# PERBAIKAN: Mengganti libjpeg62-turbo-dev dengan libjpeg-dev
 RUN apt-get update && apt-get install -y \
   build-essential \
   libpng-dev \
-  libjpeg62-turbo-dev \
+  libjpeg-dev \
   libfreetype6-dev \
   locales \
   zip \
