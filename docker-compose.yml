@@ -1,74 +1,103 @@
-# docker-compose.yml
-version: '3.8'
+version: "3.9"
+
+name: laravel-stack
+
+x-env: &default-env
+  TZ: "Asia/Jakarta"
+
+networks:
+  laravel_net:
+
+volumes:
+  db_data:
+  app_vendor:   # cache vendor composer (opsional tapi membantu)
+  app_node:     # cache node_modules (kalau pakai vite/npm)
 
 services:
   app:
     build:
-      context: .
+      context: ./docker/php
       dockerfile: Dockerfile
+    image: laravel-php82:local
     container_name: laravel_app
     restart: unless-stopped
     working_dir: /var/www/html
-    # --- PERUBAHAN DI SINI ---
-    # Hapus volume mount untuk kode. Kode sekarang ada di dalam image.
-    # volumes:
-    #   - ./:/var/www/html
-    env_file:
-      - .env.docker
+    environment:
+      <<: *default-env
+      PHP_OPCACHE_ENABLE: "1"
+      APP_ENV: ${APP_ENV:-local}
+    volumes:
+      - ./
+      - app_vendor:/var/www/html/vendor
+      - app_node:/var/www/html/node_modules
     networks:
-      - laravel-network
-    depends_on: # Tambahkan ini agar app menunggu db
-      - db
+      - laravel_net
+    healthcheck:
+      test: ["CMD-SHELL", "php -v >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    image: laravel-nginx:local
+    container_name: laravel_web
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    environment:
+      <<: *default-env
+    volumes:
+      - ./src:/var/www/html:ro
+    networks:
+      - laravel_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
 
   db:
     image: mysql:8.0
     container_name: laravel_db
     restart: unless-stopped
-    env_file:
-      - .env.docker
-    volumes:
-      - db-data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - laravel-network
-
-  nginx:
-    image: nginx:alpine
-    container_name: laravel_nginx
-    restart: unless-stopped
-    ports:
-      - "8000:80"
-    volumes:
-      - ./:/var/www/html # Volume ini tetap ada untuk Nginx agar bisa mengakses file public
-      - ./nginx:/etc/nginx/conf.d
-    depends_on:
-      - app
-    networks:
-      - laravel-network
-
-  # Layanan phpMyAdmin
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: laravel_pma
-    restart: unless-stopped
-    ports:
-      - "8081:80"
     environment:
-      PMA_HOST: db
-      # Gunakan variabel dari .env.docker
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      <<: *default-env
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+      MYSQL_USER: ${DB_USERNAME:-laravel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-laravel}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    command: >
+      mysqld --default-authentication-plugin=mysql_native_password
+             --character-set-server=utf8mb4
+             --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - laravel_net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p${DB_ROOT_PASSWORD:-root} --silent"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: laravel_phpmyadmin
+    restart: unless-stopped
     depends_on:
       - db
+    environment:
+      <<: *default-env
+      PMA_HOST: db
+      PMA_USER: ${DB_USERNAME:-laravel}
+      PMA_PASSWORD: ${DB_PASSWORD:-laravel}
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
     networks:
-      - laravel-network
-
-# Mendefinisikan jaringan untuk komunikasi antar-container
-networks:
-  laravel-network:
-    driver: bridge
-
-# Mendefinisikan volume untuk persistensi data database
-volumes:
-  db-data:
-    driver: local
+      - laravel_net
