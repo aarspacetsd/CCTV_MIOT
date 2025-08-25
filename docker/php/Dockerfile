@@ -18,7 +18,13 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 WORKDIR /var/www/html
 
 # Salin semua file dari root repositori ke dalam image
+# Pertama salin composer.json dan composer.lock untuk caching
+COPY composer.json composer.lock ./
+# Kemudian salin sisa file
 COPY . .
+
+# PERBAIKAN: Jalankan composer install untuk membuat folder vendor
+RUN composer install --optimize-autoloader --no-dev --no-interaction --no-progress
 
 # Entrypoint - Salin ke /usr/local/bin agar ada di PATH
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
