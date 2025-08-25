@@ -4,12 +4,13 @@
 # Gunakan base image PHP 8.2 dengan FPM
 FROM php:8.2-fpm
 
-# Set working directory -- PERBAIKAN TYPO DI SINI
+# Set working directory
 WORKDIR /var/www/html
 
-# Instalasi dependensi sistem yang dibutuhkan oleh Laravel
-# PERBAIKAN: Menghapus paket optimasi gambar untuk sementara
-RUN apt-get update && apt-get install -y \
+# --- PERUBAHAN UTAMA DI SINI ---
+# Membuat proses instalasi lebih kuat dan non-interaktif untuk build otomatis
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
   build-essential \
   libpng-dev \
   libjpeg-dev \
@@ -26,7 +27,8 @@ RUN apt-get update && apt-get install -y \
   libicu-dev \
   libxml2-dev \
   netcat \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
 # Instalasi ekstensi PHP yang umum digunakan
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
@@ -47,7 +49,7 @@ COPY . .
 RUN composer dump-autoload --optimize
 
 # Salin skrip start-up dan buat agar bisa dieksekusi
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY entryship.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Setel izin yang benar untuk direktori storage dan bootstrap/cache
