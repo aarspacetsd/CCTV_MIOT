@@ -38,6 +38,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Salin file aplikasi ke dalam container
 COPY . /var/www/html
 
+# --- PERUBAHAN DI SINI ---
+# Salin skrip start-up dan buat agar bisa dieksekusi
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Setel izin yang benar untuk direktori storage dan bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
@@ -45,5 +50,7 @@ RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 # Expose port 9000 untuk PHP-FPM
 EXPOSE 9000
 
-# Perintah untuk menjalankan PHP-FPM
+# --- PERUBAHAN DI SINI ---
+# Gunakan skrip entrypoint untuk menjalankan container
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
