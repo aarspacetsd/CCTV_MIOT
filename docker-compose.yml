@@ -7,15 +7,31 @@ configs:
 services:
   db:
     image: mysql:8.0
-    # konfigurasi db ...
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: cctv_miot
+      MYSQL_USER: miot
+      MYSQL_PASSWORD: "GantiPasswordUserKuat!"
+      MYSQL_ROOT_PASSWORD: "GantiPasswordRootKuat!"
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - laravel-net
 
   app:
     image: aarcsti/cctv-miot-app:latest
     working_dir: /var/www/html
     environment:
-      # variabel environment ...
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: cctv_miot
+      DB_USERNAME: miot
+      DB_PASSWORD: "GantiPasswordUserKuat!"
     volumes:
-      - app-code:/var/www/html          # ⇐ volume berbagi kode
+      - app-code:/var/www/html
       - laravel-storage:/var/www/html/storage
       - laravel-bootstrap-cache:/var/www/html/bootstrap/cache
     networks:
@@ -29,13 +45,21 @@ services:
       - source: nginx_conf
         target: /etc/nginx/conf.d/default.conf
     volumes:
-      - app-code:/var/www/html:ro       # ⇐ volume berbagi kode (read-only)
+      - app-code:/var/www/html:ro
     networks:
       - laravel-net
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    # konfigurasi phpMyAdmin ...
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: "3306"
+      PMA_USER: miot
+      PMA_PASSWORD: "GantiPasswordUserKuat!"
+    networks:
+      - laravel-net
 
 networks:
   laravel-net:
@@ -46,4 +70,4 @@ volumes:
   db-data:
   laravel-storage:
   laravel-bootstrap-cache:
-  app-code:                             # ⇐ definisi volume baru
+  app-code:
