@@ -11,17 +11,17 @@ RUN apt-get update && apt-get install -y \
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# PHP ini
-COPY php.ini /usr/local/etc/php/conf.d/custom.ini
+# PHP ini - PERBAIKAN: Path lengkap dari root context
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 # Workdir
 WORKDIR /var/www/html
 
+# Salin semua file dari root repositori ke dalam image
 COPY . .
 
-# Entrypoint untuk set permission & init ringan
+# Entrypoint - PERBAIKAN: Path lengkap dari root context
 COPY docker/php/entrypoint.sh /entrypoint.sh
-# Sesuaikan path entrypoint
 RUN chmod +x /entrypoint.sh
 
 # Atur kepemilikan file setelah menyalin kode
