@@ -13,6 +13,7 @@ volumes:
   db_data:
   app_vendor:
   app_node:
+  laravel_public:
 
 services:
   app:
@@ -30,6 +31,7 @@ services:
     volumes:
       - app_vendor:/var/www/html/vendor
       - app_node:/var/www/html/node_modules
+      - laravel_public:/var/www/html/public
     networks:
       - laravel_net
     healthcheck:
@@ -47,6 +49,8 @@ services:
     restart: unless-stopped
     depends_on:
       - app
+    volumes:
+      - laravel_public:/var/www/html/public:ro
     ports:
       - "${HTTP_PORT:-8080}:80"
     environment:
