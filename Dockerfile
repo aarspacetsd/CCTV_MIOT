@@ -9,8 +9,8 @@ WORKDIR /var/www/html
 
 # --- PERUBAHAN UTAMA DI SINI ---
 # Membuat proses instalasi lebih kuat dan non-interaktif untuk build otomatis
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
+RUN apt-get update --fix-missing \
+  && apt-get install -y --no-install-recommends --fix-broken \
   build-essential \
   libpng-dev \
   libjpeg-dev \
@@ -26,7 +26,8 @@ RUN apt-get update \
   graphviz \
   libicu-dev \
   libxml2-dev \
-  netcat \
+  netcat-traditional \
+  && apt-get autoremove -y \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
