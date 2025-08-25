@@ -14,9 +14,7 @@ if [ ! -f ".env" ]; then
     php artisan key:generate
 fi
 
-# PERBAIKAN: Buat symbolic link untuk storage
-echo "Creating storage link..."
-php artisan storage:link
+# Perintah 'storage:link' dihapus karena kita menggunakan volume bersama
 
 # Perbaiki izin folder
 echo "Fixing ownership and permissions for storage and cache..."
