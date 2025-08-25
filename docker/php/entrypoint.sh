@@ -7,8 +7,12 @@ cd /var/www/html
 # Hanya lakukan hal-hal penting untuk startup
 # Jika file .env tidak ada, buat dari .env.example dan generate key
 if [ ! -f ".env" ]; then
-    echo "Creating .env file and generating key..."
+    echo "Creating .env file..."
     cp .env.example .env
+
+    # PERBAIKAN: Pastikan baris APP_KEY ada sebelum men-generate
+    echo "Ensuring APP_KEY is set..."
+    grep -q "APP_KEY=" .env || echo "APP_KEY=" >> .env
     php artisan key:generate
 fi
 
