@@ -6,15 +6,17 @@ services:
     build: .
     container_name: laravel-app
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_KEY: base64:JATe/JyiyMJmL26D/TQ26lfU/1bUlakRsPmXWDv761k=
       APP_URL: http://localhost
       DB_HOST: db
       DB_DATABASE: cctv_miot
       DB_USERNAME: miot
-      DB_PASSWORD: GantiPasswordUserKuat!
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_KEY: ${APP_KEY}
     volumes:
       - ./:/var/www/html
     networks:
@@ -39,11 +41,13 @@ services:
     image: mysql:8.0
     container_name: mysql
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
       MYSQL_DATABASE: cctv_miot
       MYSQL_USER: miot
-      MYSQL_PASSWORD: GantiPasswordUserKuat!
-      MYSQL_ROOT_PASSWORD: GantiPasswordRootKuat!
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - db-data:/var/lib/mysql
     networks:
