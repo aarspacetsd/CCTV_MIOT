@@ -16,9 +16,9 @@ if [ ! -f ".env" ]; then
     php artisan key:generate
 fi
 
-# Perbaiki izin HANYA untuk folder yang diperlukan agar Laravel tidak error
-# chown akan dijalankan oleh docker-php-entrypoint
-echo "Fixing permissions for storage and cache..."
+# PERBAIKAN: Tambahkan 'chown' untuk memastikan www-data memiliki kepemilikan folder
+echo "Fixing ownership and permissions for storage and cache..."
+chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
 # Jalankan perintah utama dari Dockerfile (yaitu "php-fpm")
