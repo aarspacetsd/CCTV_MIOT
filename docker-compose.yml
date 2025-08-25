@@ -1,75 +1,75 @@
 # docker-compose.yml
-version: "3.8"
+# File ini mendefinisikan dan mengonfigurasi semua layanan yang dibutuhkan aplikasi Anda.
+
+version: '3.8'
 
 services:
+  # Layanan Aplikasi Laravel (PHP-FPM)
   app:
-    build: .
-    container_name: laravel-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_app
     restart: unless-stopped
-    environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_KEY: base64:JATe/JyiyMJmL26D/TQ26lfU/1bUlakRsPmXWDv761k=
-      APP_URL: http://localhost
-      DB_HOST: db
-      DB_DATABASE: cctv_miot
-      DB_USERNAME: miot
-      DB_PASSWORD: GantiPasswordUserKuat!
+    working_dir: /var/www/html
     volumes:
       - ./:/var/www/html
     networks:
-      - laravel
+      - laravel-network
 
-  web:
-    image: nginx:stable-alpine
-    container_name: nginx
+  # Layanan Database MySQL
+  db:
+    image: mysql:8.0
+    container_name: laravel_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - laravel-network
+
+  # Layanan Web Server Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: laravel_nginx
     restart: unless-stopped
     ports:
       - "8000:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./public:/var/www/html/public
-      - ./storage/app/public:/var/www/html/storage/app/public
+      - ./:/var/www/html
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - app
     networks:
-      - laravel
+      - laravel-network
 
-  db:
-    image: mysql:8.0
-    container_name: mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: cctv_miot
-      MYSQL_USER: miot
-      MYSQL_PASSWORD: GantiPasswordUserKuat!
-      MYSQL_ROOT_PASSWORD: GantiPasswordRootKuat!
-    volumes:
-      - db-data:/var/lib/mysql
-    networks:
-      - laravel
-
+  # Layanan phpMyAdmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
+    container_name: laravel_pma
     restart: unless-stopped
     ports:
       - "8081:80"
     environment:
       PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - db
     networks:
-      - laravel
+      - laravel-network
 
-  watchtower:
-    image: containrrr/watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300
-    networks:
-      - laravel
-
+# Mendefinisikan jaringan untuk komunikasi antar-container
 networks:
-  laravel:
+  laravel-network:
+    driver: bridge
 
+# Mendefinisikan volume untuk persistensi data database
 volumes:
   db-data:
+    driver: local
