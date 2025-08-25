@@ -7,6 +7,7 @@ x-env: &default-env
 
 networks:
   laravel_net:
+    driver: bridge
 
 volumes:
   db_data:
@@ -27,7 +28,7 @@ services:
       PHP_OPCACHE_ENABLE: "1"
       APP_ENV: ${APP_ENV:-local}
     volumes:
-    #   - ./
+      # Volume untuk cache, bukan untuk kode
       - app_vendor:/var/www/html/vendor
       - app_node:/var/www/html/node_modules
     networks:
@@ -51,8 +52,7 @@ services:
       - "${HTTP_PORT:-8080}:80"
     environment:
       <<: *default-env
-    volumes:
-    #   - ./src:/var/www/html:ro
+    # Bagian volumes dihapus karena tidak diperlukan lagi
     networks:
       - laravel_net
     healthcheck:
