@@ -3,17 +3,16 @@ FROM php:8.2-fpm
 
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /var/www/html
-
-# OS deps (aman untuk non-interaktif) + locales
+# OS deps (lengkap untuk build ekstensi)
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
   ca-certificates gnupg locales \
-  build-essential \
-  git curl unzip zip vim \
+  build-essential pkg-config \
+  git curl unzip zip \
   libicu-dev \
   libxml2-dev \
-  libzip-dev \
+  libzip-dev zlib1g-dev \
   libpng-dev \
   libjpeg62-turbo-dev \
   libfreetype6-dev \
@@ -24,26 +23,12 @@ RUN set -eux; \
   sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen; \
   rm -rf /var/lib/apt/lists/*
 
-ENV LANG=en_US.UTF-8 \
-  LANGUAGE=en_US:en \
-  LC_ALL=en_US.UTF-8
-
-# Configure & install PHP extensions
-# - zip: butuh libzip-dev
-# - intl: butuh libicu-dev
-# - gd: butuh libjpeg62-turbo-dev, libfreetype6-dev, libpng-dev, libwebp-dev
+# Konfigurasi & install ekstensi PHP
 RUN set -eux; \
   docker-php-ext-configure gd --with-jpeg --with-freetype --with-webp; \
   docker-php-ext-install -j"$(nproc)" \
-  pdo_mysql \
-  mbstring \
-  exif \
-  pcntl \
-  bcmath \
-  gd \
-  zip \
-  intl \
-  opcache
+  pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache
+
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
