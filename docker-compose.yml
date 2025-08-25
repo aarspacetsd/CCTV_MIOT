@@ -11,8 +11,8 @@ networks:
 
 volumes:
   db_data:
-  app_vendor:   # cache vendor composer (opsional tapi membantu)
-  app_node:     # cache node_modules (kalau pakai vite/npm)
+  app_vendor:
+  app_node:
 
 services:
   app:
@@ -28,7 +28,6 @@ services:
       PHP_OPCACHE_ENABLE: "1"
       APP_ENV: ${APP_ENV:-local}
     volumes:
-      # Volume untuk cache, bukan untuk kode
       - app_vendor:/var/www/html/vendor
       - app_node:/var/www/html/node_modules
     networks:
@@ -52,14 +51,14 @@ services:
       - "${HTTP_PORT:-8080}:80"
     environment:
       <<: *default-env
-    # Bagian volumes dihapus karena tidak diperlukan lagi
     networks:
       - laravel_net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      # PERBAIKAN: Healthcheck yang lebih andal
+      test: ["CMD-SHELL", "SCRIPT_NAME=/health SCRIPT_FILENAME=/health REQUEST_METHOD=GET cgi-fcgi -bind -connect app:9000 || exit 1"]
       interval: 20s
-      timeout: 5s
-      retries: 10
+      timeout: 10s
+      retries: 5
 
   db:
     image: mysql:8.0

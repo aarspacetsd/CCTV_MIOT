@@ -1,6 +1,9 @@
 FROM nginx:alpine
 
-# PERBAIKAN: Path lengkap dari root context
+# TAMBAHKAN BARIS INI: Install paket untuk healthcheck yang lebih baik
+RUN apk add --no-cache fcgi
+
+# Salin file konfigurasi Nginx
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 
 WORKDIR /var/www/html
