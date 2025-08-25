@@ -54,11 +54,11 @@ services:
     networks:
       - laravel_net
     healthcheck:
-      # PERBAIKAN: Healthcheck yang lebih andal
       test: ["CMD-SHELL", "SCRIPT_NAME=/health SCRIPT_FILENAME=/health REQUEST_METHOD=GET cgi-fcgi -bind -connect app:9000 || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
+      start_period: 30s # PERBAIKAN: Memberi waktu 30 detik sebelum healthcheck dimulai
 
   db:
     image: mysql:8.0
