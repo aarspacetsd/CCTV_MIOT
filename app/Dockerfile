@@ -6,7 +6,6 @@ FROM php:8.2-fpm-alpine
 WORKDIR /var/www/html
 
 # Install dependensi sistem yang dibutuhkan oleh PHP extensions
-# Menambahkan beberapa library yang umum dibutuhkan seperti libxml2 dan oniguruma
 RUN apk update && apk add --no-cache \
   build-base \
   git \
@@ -21,7 +20,7 @@ RUN apk update && apk add --no-cache \
   oniguruma-dev
 
 # Konfigurasi dan install ekstensi PHP
-# Menggunakan -j$(nproc) untuk mempercepat proses kompilasi
+# MENAMBAHKAN ekstensi umum yang dibutuhkan Laravel: ctype, fileinfo, dom, xml, tokenizer
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
   && docker-php-ext-install -j$(nproc) \
   pdo pdo_mysql \
@@ -30,7 +29,12 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
   pcntl \
   bcmath \
   gd \
-  zip
+  zip \
+  ctype \
+  fileinfo \
+  dom \
+  xml \
+  tokenizer
 
 # Install Composer (dependency manager untuk PHP)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -41,16 +45,18 @@ RUN rm -rf /var/cache/apk/*
 # Salin file composer.json dan composer.lock
 COPY composer.json composer.lock ./
 
-# Install dependensi vendor tanpa script dev
-RUN composer install --no-interaction --no-plugins --no-dev --prefer-dist --no-autoloader --no-scripts
+# Install dependensi vendor untuk produksi dan optimalkan autoloader
+# Menggunakan --optimize-autoloader lebih efisien
+RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader
 
-# Salin seluruh kode aplikasi
+# Salin seluruh kode aplikasi (termasuk file .env Anda)
 COPY . .
 
-# Generate autoloader yang dioptimalkan
-RUN composer dump-autoload --optimize
+# PERINGATAN KEAMANAN: File .env Anda yang berisi kredensial sensitif
+# ikut disalin ke dalam image Docker. Ini tidak disarankan untuk produksi.
+# Praktik terbaik adalah menggunakan .env.example dan mengisi variabel saat runtime.
 
-# Generate application key Laravel
+# Generate application key Laravel (akan menulis ke file .env yang sudah disalin)
 RUN php artisan key:generate
 
 # Atur kepemilikan file ke user www-data
