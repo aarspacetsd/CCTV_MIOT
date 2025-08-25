@@ -1,11 +1,17 @@
-.git
-.github
-.env
-.env.example
-node_modules
-vendor
+# Abaikan semua file yang diawali dengan titik
+.*
+
+# Tapi JANGAN abaikan file-file penting ini
+!.gitignore
+!.editorconfig
+!.env.example
+
+# Abaikan direktori dan file lain yang tidak perlu di dalam image
+/vendor/
+/node_modules/
+npm-debug.log
+yarn-error.log
+.DS_Store
 storage/framework/sessions/*
 storage/framework/cache/data/*
-storage/framework/views/*
 storage/logs/*.log
-public/storage
