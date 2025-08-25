@@ -43,7 +43,9 @@ services:
       - "8000:80"
     volumes:
       - ./:/var/www/html
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      # --- PERUBAHAN DI SINI ---
+      # Path file disesuaikan untuk mencocokkan nama file yang baru.
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - app
     networks:
