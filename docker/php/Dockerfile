@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# PHP ini - PERBAIKAN: Path lengkap dari root context
+# PHP ini - Path lengkap dari root context
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 # Workdir
@@ -20,15 +20,12 @@ WORKDIR /var/www/html
 # Salin semua file dari root repositori ke dalam image
 COPY . .
 
-# Entrypoint - PERBAIKAN: Path lengkap dari root context
-COPY docker/php/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Entrypoint - Salin ke /usr/local/bin agar ada di PATH
+COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Atur kepemilikan file setelah menyalin kode
-RUN chown -R www-data:www-data /var/www/html
+# Jalankan script entrypoint kustom kita. Ini akan berjalan sebagai root.
+ENTRYPOINT ["entrypoint.sh"]
 
-USER www-data
-
-EXPOSE 9000
-ENTRYPOINT ["/entrypoint.sh"]
+# CMD asli dari base image (php-fpm) akan dijalankan oleh entrypoint.sh
 CMD ["php-fpm"]
