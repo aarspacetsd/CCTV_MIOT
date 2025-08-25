@@ -16,8 +16,8 @@ volumes:
 services:
   app:
     build:
-      context: ./docker/php
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./docker/php/Dockerfile
     image: laravel-php82:local
     container_name: laravel_app
     restart: unless-stopped
@@ -27,7 +27,7 @@ services:
       PHP_OPCACHE_ENABLE: "1"
       APP_ENV: ${APP_ENV:-local}
     volumes:
-      - ./
+    #   - ./
       - app_vendor:/var/www/html/vendor
       - app_node:/var/www/html/node_modules
     networks:
@@ -40,8 +40,8 @@ services:
 
   web:
     build:
-      context: ./docker/nginx
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
     image: laravel-nginx:local
     container_name: laravel_web
     restart: unless-stopped
@@ -52,7 +52,7 @@ services:
     environment:
       <<: *default-env
     volumes:
-      - ./src:/var/www/html:ro
+    #   - ./src:/var/www/html:ro
     networks:
       - laravel_net
     healthcheck:
