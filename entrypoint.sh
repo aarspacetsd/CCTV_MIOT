@@ -2,28 +2,29 @@
 set -e
 
 # --- PERUBAHAN DI SINI ---
-# Salin dari .env.example (yang ada di repo Anda) jika .env belum ada
-if [ ! -f ".env" ]; then
-    echo "Creating .env file from .env.example"
-    cp .env.example .env
-fi
+# Alih-alih menyalin file, kita akan membuat file .env secara dinamis
+# dari variabel lingkungan yang disuntikkan oleh Docker Compose.
+echo "Creating .env file from environment variables..."
+printenv | grep -E '^(APP_|DB_|BROADCAST_|CACHE_|FILESYSTEM_|QUEUE_|SESSION_|MEMCACHED_|REDIS_|MAIL_|AWS_|PUSHER_|VITE_)' > .env
 
 # Instal dependensi Composer
-# Opsi --no-scripts mencegah error jika APP_KEY belum ada
-composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Buat kunci aplikasi (APP_KEY)
+# Generate kunci aplikasi
 php artisan key:generate
+
+# Bersihkan cache
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
 
 # Jalankan migrasi database
 php artisan migrate --force
 
-# Bersihkan dan cache konfigurasi untuk produksi
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+# Setel izin yang benar
+chown -R www-data:www-data storage bootstrap/cache
 
 echo "Setup completed. Starting PHP-FPM..."
 
-# Jalankan perintah asli yang dikirim ke container (yaitu, php-fpm)
-exec "$@"
+# Jalankan proses utama (PHP-FPM)
+exec php-fpm
