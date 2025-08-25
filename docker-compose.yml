@@ -1,73 +1,80 @@
-# docker-compose.yml (Versi Swarm)
-version: '3.8'
+# docker-compose.yml (Standalone)
+version: "3.8"
 
 services:
-  # Service untuk Aplikasi Laravel
-  app:
-    # PENTING: Opsi 'build' dihapus. Image akan diambil dari registry.
-    # Ganti 'your-dockerhub-username/your-app-name' dengan nama image Anda di Docker Hub.
-    image: aarcsti/cctv-miot-app:latest
-    working_dir: /var/www/html
-    volumes:
-      # Kode sekarang ada di dalam image, jadi kita hanya butuh volume untuk storage.
-      - laravel-storage:/var/www/html/storage
-      - laravel-bootstrap-cache:/var/www/html/bootstrap/cache
-    networks:
-      - laravel-net
-    # Environment file akan dibaca dari .env di repository
-    env_file:
-      - .env
-
-  # Service untuk Database (MySQL)
   db:
     image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_DATABASE: ${Sistem_Camera_MIOT}
-      MYSQL_ROOT_PASSWORD: ${root} # Password root
-      MYSQL_PASSWORD: ${miot123}      # Password user
-      MYSQL_USER: ${miot}
+      MYSQL_DATABASE: cctv_miot
+      MYSQL_USER: miot
+      MYSQL_PASSWORD: "GantiPasswordUserKuat!"
+      MYSQL_ROOT_PASSWORD: "GantiPasswordRootKuat!"
     volumes:
       - db-data:/var/lib/mysql
     networks:
       - laravel-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pGantiPasswordRootKuat!"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
-  # Service untuk Web Server (Nginx)
+  app:
+    image: aarcsti/cctv-miot-app:latest
+    working_dir: /var/www/html
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: cctv_miot
+      DB_USERNAME: miot
+      DB_PASSWORD: "GantiPasswordUserKuat!"
+    volumes:
+      - laravel-storage:/var/www/html/storage
+      - laravel-bootstrap-cache:/var/www/html/bootstrap/cache
+    networks:
+      - laravel-net
+    depends_on:
+      - db
+
   nginx:
     image: nginx:alpine
     ports:
       - "8000:80"
     volumes:
-      # Kode aplikasi tidak lagi di-mount di sini karena Nginx akan meneruskan request PHP ke service 'app'
-      # File statis akan disalin ke image Nginx atau dilayani oleh Laravel.
-      # Untuk setup sederhana, kita akan biarkan Laravel yang menangani file statis.
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # ⚠️ NGINX perlu melihat source code Laravel (public/index.php).
+      # Jika kodenya ada DI DALAM image "app", NGINX TIDAK BISA melihat file tsb.
+      # Opsi cepat: mount kode yang sama ke nginx juga (jika kamu simpan kode di host).
+      # Contoh (hapus komentar jika kamu pakai bind mount kode di host):
+      # - ./src:/var/www/html:ro
     networks:
       - laravel-net
     depends_on:
       - app
 
-  # Service untuk phpMyAdmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
       - "8081:80"
     environment:
       PMA_HOST: db
-      PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: ${root}
+      PMA_PORT: "3306"
+      PMA_USER: miot
+      PMA_PASSWORD: "GantiPasswordUserKuat!"
     networks:
       - laravel-net
     depends_on:
       - db
 
-# Definisi network
 networks:
   laravel-net:
-    # PENTING: Driver diubah menjadi 'overlay' agar kompatibel dengan Swarm
-    driver: overlay
-    attachable: true
+    driver: bridge
 
-# Definisi volume
 volumes:
   db-data:
   laravel-storage:
