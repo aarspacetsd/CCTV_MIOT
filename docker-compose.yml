@@ -44,8 +44,9 @@ services:
     volumes:
       - ./:/var/www/html
       # --- PERUBAHAN DI SINI ---
-      # Path file disesuaikan untuk mencocokkan nama file yang baru.
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      # Mount seluruh direktori nginx, bukan hanya satu file.
+      # Pastikan file konfigurasi Anda di dalam direktori nginx bernama 'default.conf'.
+      - ./nginx:/etc/nginx/conf.d
     depends_on:
       - app
     networks:
