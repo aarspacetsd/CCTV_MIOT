@@ -49,7 +49,8 @@ COPY . .
 RUN composer dump-autoload --optimize
 
 # Salin skrip start-up dan buat agar bisa dieksekusi
-COPY entryship.sh /usr/local/bin/entrypoint.sh
+# PERBAIKAN TYPO DI SINI
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Setel izin yang benar untuk direktori storage dan bootstrap/cache
