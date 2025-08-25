@@ -1,0 +1,22 @@
+# .github/workflows/deploy.yml
+name: Deploy to Portainer
+
+# Trigger workflow ini setiap kali ada push ke branch 'main'
+on:
+  push:
+    branches:
+      - main # atau branch utama Anda, misal: master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Langkah ini tidak membangun image, hanya memanggil webhook.
+      # Portainer akan menarik (pull) image terbaru dari registry atau membangunnya jika dikonfigurasi.
+      # Untuk CI/CD sejati, Anda akan menambahkan langkah untuk build dan push image ke Docker Hub/GHCR.
+      # Namun, untuk setup sederhana dengan Portainer Standalone, webhook sudah cukup.
+      - name: Trigger Portainer Webhook
+        run: curl -X POST ${{ secrets.PORTAINER_WEBHOOK_URL }}

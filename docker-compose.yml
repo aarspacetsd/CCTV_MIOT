@@ -1,65 +1,91 @@
+# docker-compose.yml
+# Versi file docker-compose
 version: '3.8'
 
+# Definisi semua services yang akan berjalan
 services:
-  # Service Aplikasi Laravel (PHP-FPM)
+  # Service untuk Aplikasi Laravel
   app:
+    # Membangun image dari Dockerfile di direktori ./app
     build:
-      context: .
+      context: ./app
       dockerfile: Dockerfile
+    # Nama image yang akan dibuat
+    image: your-app-name # Ganti dengan nama aplikasi Anda
     container_name: laravel_app
     restart: unless-stopped
+    working_dir: /var/www/html
+    # Menghubungkan volume dari lokal ke container
+    # Kode aplikasi Anda akan disalin ke dalam image saat build, jadi volume ini tidak wajib untuk produksi
+    # Namun, bisa berguna saat development
     volumes:
-      - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
-    environment:
-      - "DB_HOST=db"
-      - "DB_PORT=${DB_PORT}"
-      - "DB_DATABASE=${DB_DATABASE}"
-      - "DB_USERNAME=${DB_USERNAME}"
-      - "DB_PASSWORD=${DB_PASSWORD}"
-      # Variabel lain dari file .env Anda akan ditambahkan di Portainer UI
-      - "APP_KEY=${APP_KEY}"
-      - "APP_ENV=${APP_ENV}"
-      - "APP_DEBUG=${APP_DEBUG}"
-      - "APP_URL=${APP_URL}"
+      - ./:/var/www/html
     networks:
       - laravel-net
 
-  # Service Web Server Nginx
-  nginx:
-    image: nginx:1.23-alpine
-    container_name: laravel_nginx
-    restart: unless-stopped
-    ports:
-      - "8004:80" # Akses aplikasi dari luar melalui port 8000
-    volumes:
-      - .:/var/www/html
-      # PERUBAHAN: Mount seluruh direktori konfigurasi, bukan hanya satu file.
-      - ./docker/nginx:/etc/nginx/conf.d
-    depends_on:
-      - app
-    networks:
-      - laravel-net
-
-  # Service Database (contoh: MySQL)
+  # Service untuk Database (MySQL)
   db:
     image: mysql:8.0
     container_name: laravel_db
     restart: unless-stopped
+    # Environment variables untuk konfigurasi database
+    # PENTING: Ganti nilai ini dengan kredensial aman Anda
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${Sistem_Camera_MIOT}
+      MYSQL_ROOT_PASSWORD: ${root} # Password root
+      MYSQL_PASSWORD: ${miot123}      # Password user
+      MYSQL_USER: ${miot}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
     volumes:
+      # Menyimpan data database secara persisten
       - db-data:/var/lib/mysql
     networks:
       - laravel-net
 
+  # Service untuk Web Server (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: laravel_nginx
+    restart: unless-stopped
+    ports:
+      # Membuka port 80 di host dan meneruskannya ke port 80 di container
+      - "8000:80" # Anda bisa ganti port 8000 dengan port lain yang Anda inginkan
+    volumes:
+      # Volume untuk kode aplikasi (agar Nginx bisa mengakses file statis)
+      - ./:/var/www/html
+      # Volume untuk file konfigurasi Nginx
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - laravel-net
+    # Nginx harus menunggu service 'app' siap sebelum berjalan
+    depends_on:
+      - app
+
+  # Service untuk phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laravel_phpmyadmin
+    restart: unless-stopped
+    ports:
+      # Membuka port 8081 untuk phpMyAdmin
+      - "8081:80"
+    environment:
+      # Menghubungkan phpMyAdmin ke service database 'db'
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} # Gunakan password root yang sama
+    networks:
+      - laravel-net
+    depends_on:
+      - db
+
+# Definisi network
 networks:
   laravel-net:
     driver: bridge
 
+# Definisi volume
 volumes:
   db-data:
     driver: local
