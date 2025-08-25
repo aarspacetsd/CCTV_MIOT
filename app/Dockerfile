@@ -5,22 +5,25 @@ FROM php:8.1-fpm-alpine
 # Set working directory
 WORKDIR /var/www/html
 
-# Install dependensi yang dibutuhkan sistem dan ekstensi PHP
+# Install dependensi sistem yang dibutuhkan oleh PHP extensions
+# Menambahkan beberapa library yang umum dibutuhkan seperti libxml2 dan oniguruma
 RUN apk update && apk add --no-cache \
   build-base \
-  libpng-dev \
-  jpeg-dev \
-  freetype-dev \
-  libzip-dev \
-  zip \
-  unzip \
   git \
   curl \
-  nginx
+  unzip \
+  zip \
+  libzip-dev \
+  libpng-dev \
+  libjpeg-turbo-dev \
+  freetype-dev \
+  libxml2-dev \
+  oniguruma-dev
 
-# Konfigurasi dan install ekstensi PHP yang umum untuk Laravel
+# Konfigurasi dan install ekstensi PHP
+# Menggunakan -j$(nproc) untuk mempercepat proses kompilasi
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-  && docker-php-ext-install \
+  && docker-php-ext-install -j$(nproc) \
   pdo pdo_mysql \
   mbstring \
   exif \
@@ -39,10 +42,13 @@ RUN rm -rf /var/cache/apk/*
 COPY composer.json composer.lock ./
 
 # Install dependensi vendor tanpa script dev
-RUN composer install --no-interaction --no-plugins --no-scripts --no-dev --prefer-dist
+RUN composer install --no-interaction --no-plugins --no-dev --prefer-dist --no-autoloader --no-scripts
 
 # Salin seluruh kode aplikasi
 COPY . .
+
+# Generate autoloader yang dioptimalkan
+RUN composer dump-autoload --optimize
 
 # Generate application key Laravel
 RUN php artisan key:generate
