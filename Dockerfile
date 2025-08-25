@@ -4,11 +4,11 @@
 # Gunakan base image PHP 8.2 dengan FPM
 FROM php:8.2-fpm
 
-# Set working directory
-WORKDIR /var/w ww/html
+# Set working directory -- PERBAIKAN TYPO DI SINI
+WORKDIR /var/www/html
 
 # Instalasi dependensi sistem yang dibutuhkan oleh Laravel
-# PERBAIKAN: Mengganti libjpeg62-turbo-dev dengan libjpeg-dev
+# PERBAIKAN: Menghapus paket optimasi gambar untuk sementara
 RUN apt-get update && apt-get install -y \
   build-essential \
   libpng-dev \
@@ -16,7 +16,6 @@ RUN apt-get update && apt-get install -y \
   libfreetype6-dev \
   locales \
   zip \
-  jpegoptim optipng pngquant gifsicle \
   vim \
   unzip \
   git \
@@ -26,10 +25,8 @@ RUN apt-get update && apt-get install -y \
   graphviz \
   libicu-dev \
   libxml2-dev \
-  netcat
-
-# Bersihkan cache apt
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+  netcat \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Instalasi ekstensi PHP yang umum digunakan
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
