@@ -46,7 +46,7 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+        - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       # ⚠️ NGINX perlu melihat source code Laravel (public/index.php).
       # Jika kodenya ada DI DALAM image "app", NGINX TIDAK BISA melihat file tsb.
       # Opsi cepat: mount kode yang sama ke nginx juga (jika kamu simpan kode di host).
