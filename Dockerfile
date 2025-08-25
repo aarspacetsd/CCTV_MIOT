@@ -7,7 +7,7 @@ FROM php:8.2-fpm
 # Set working directory
 WORKDIR /var/www/html
 
-# Instalasi dependensi yang dibutuhkan oleh Laravel
+# Instalasi dependensi sistem yang dibutuhkan oleh Laravel
 RUN apt-get update && apt-get install -y \
   build-essential \
   libpng-dev \
@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y \
   libicu-dev \
   libxml2-dev
 
-# Bersihkan cache
+# Bersihkan cache apt
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Instalasi ekstensi PHP yang umum digunakan
@@ -35,10 +35,23 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
 # Instal Composer (dependency manager untuk PHP)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Salin file aplikasi ke dalam container
-COPY . /var/www/html
+# --- PERUBAHAN UTAMA DIMULAI DI SINI ---
 
-# --- PERUBAHAN DI SINI ---
+# 1. Salin hanya file composer terlebih dahulu untuk memanfaatkan cache Docker
+COPY composer.json composer.lock ./
+
+# 2. Jalankan composer install untuk mengunduh vendor dependencies
+#    --no-autoloader dan --no-scripts agar lebih cepat, kita akan generate nanti
+RUN composer install --no-interaction --no-scripts --no-autoloader --prefer-dist
+
+# 3. Salin sisa file aplikasi ke dalam container
+COPY . .
+
+# 4. Generate autoloader yang dioptimalkan
+RUN composer dump-autoload --optimize
+
+# --- AKHIR PERUBAHAN UTAMA ---
+
 # Salin skrip start-up dan buat agar bisa dieksekusi
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
@@ -50,7 +63,6 @@ RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 # Expose port 9000 untuk PHP-FPM
 EXPOSE 9000
 
-# --- PERUBAHAN DI SINI ---
 # Gunakan skrip entrypoint untuk menjalankan container
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]

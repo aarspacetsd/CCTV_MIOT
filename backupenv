@@ -3,7 +3,7 @@ APP_ENV=local
 APP_KEY=base64:rSPHbvP/yMMX1VF7o7mxCCwtM3SdNtUPGidxQDJrRhg=
 APP_DEBUG=true
 APP_TIMEZONE=UTC
-APP_URL=http://localhost
+APP_URL=http://cctv.ahmadakmal.my.id
 
 APP_LOCALE=en
 APP_FALLBACK_LOCALE=en
