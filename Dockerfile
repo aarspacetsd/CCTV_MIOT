@@ -1,9 +1,9 @@
-# -------- base PHP-FPM 8.2 (Debian Bookworm) --------
 FROM php:8.2-fpm
 
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /var/www/html
-# OS deps (lengkap untuk build ekstensi)
+
+# OS deps lengkap untuk build ekstensi
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
@@ -23,36 +23,27 @@ RUN set -eux; \
   sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen; \
   rm -rf /var/lib/apt/lists/*
 
-# Konfigurasi & install ekstensi PHP
+ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
+
+# Konfigurasi & install ekstensi (batasi paralelisme ke -j1)
 RUN set -eux; \
   docker-php-ext-configure gd --with-jpeg --with-freetype --with-webp; \
-  docker-php-ext-install -j"$(nproc)" \
-  pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache
-
+  docker-php-ext-install -j1 pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# (opsional) Optimasi layer: install vendor dulu biar cache efektif
+# (opsional) optimasi layer vendor
 COPY composer.json composer.lock ./
-RUN set -eux; \
-  composer install --no-interaction --no-scripts --no-dev --prefer-dist --no-progress
+RUN set -eux; composer install --no-interaction --no-scripts --no-dev --prefer-dist --no-progress || true
 
-# Salin source code aplikasi
 COPY . .
 
-# Dump autoload
 RUN composer dump-autoload --optimize
 
-# Izin folder Laravel
 RUN set -eux; \
   chown -R www-data:www-data storage bootstrap/cache; \
   chmod -R 775 storage bootstrap/cache
 
-# Entrypoint
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 EXPOSE 9000
-ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
