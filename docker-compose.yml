@@ -1,5 +1,9 @@
 version: "3.8"
 
+configs:
+  nginx_conf:
+    file: ./nginx.conf
+
 services:
   db:
     image: mysql:8.0
@@ -37,11 +41,14 @@ services:
     image: nginx:alpine
     ports:
       - "8000:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      # kalau perlu: - ./src:/var/www/html:ro
+    configs:
+      - source: nginx_conf
+        target: /etc/nginx/conf.d/default.conf
     networks:
       - laravel-net
+    # jika diperlukan: mount kode sumber
+    # volumes:
+    #   - ./src:/var/www/html:ro
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
