@@ -14,6 +14,11 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./:/var/www/html
+    # --- PERUBAHAN DI SINI ---
+    # Memberitahu Docker Compose untuk memuat variabel dari file .env.docker
+    # dan menyuntikkannya ke dalam kontainer ini.
+    env_file:
+      - .env.docker
     networks:
       - laravel-network
 
@@ -22,11 +27,9 @@ services:
     image: mysql:8.0
     container_name: laravel_db
     restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_USER: ${DB_USERNAME}
+    # Variabel environment untuk database juga diambil dari .env.docker
+    env_file:
+      - .env.docker
     volumes:
       - db-data:/var/lib/mysql
     ports:
@@ -43,9 +46,6 @@ services:
       - "8000:80"
     volumes:
       - ./:/var/www/html
-      # --- PERUBAHAN DI SINI ---
-      # Mount seluruh direktori nginx, bukan hanya satu file.
-      # Pastikan file konfigurasi Anda di dalam direktori nginx bernama 'default.conf'.
       - ./nginx:/etc/nginx/conf.d
     depends_on:
       - app
@@ -61,6 +61,7 @@ services:
       - "8081:80"
     environment:
       PMA_HOST: db
+      # Gunakan variabel dari .env.docker
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     depends_on:
       - db
