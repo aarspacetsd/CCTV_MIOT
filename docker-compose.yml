@@ -3,7 +3,9 @@ version: "3.8"
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: app/Dockerfile
     container_name: laravel-app
     restart: unless-stopped
     environment:
