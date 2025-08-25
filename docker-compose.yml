@@ -1,4 +1,4 @@
-# docker-compose.yml (Standalone)
+# docker-compose.yml — Standalone (bridge) + bind-mount kode
 version: "3.8"
 
 services:
@@ -20,6 +20,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+    restart: unless-stopped
 
   app:
     image: aarcsti/cctv-miot-app:latest
@@ -34,28 +35,27 @@ services:
       DB_USERNAME: miot
       DB_PASSWORD: "GantiPasswordUserKuat!"
     volumes:
+      - ./src:/var/www/html                 # <-- mount kode
       - laravel-storage:/var/www/html/storage
       - laravel-bootstrap-cache:/var/www/html/bootstrap/cache
     networks:
       - laravel-net
     depends_on:
       - db
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
     ports:
       - "8000:80"
     volumes:
-        - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      # ⚠️ NGINX perlu melihat source code Laravel (public/index.php).
-      # Jika kodenya ada DI DALAM image "app", NGINX TIDAK BISA melihat file tsb.
-      # Opsi cepat: mount kode yang sama ke nginx juga (jika kamu simpan kode di host).
-      # Contoh (hapus komentar jika kamu pakai bind mount kode di host):
-      # - ./src:/var/www/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro  # <-- pastikan file ini ada
+      - ./src:/var/www/html:ro                          # <-- mount kode ke nginx juga
     networks:
       - laravel-net
     depends_on:
       - app
+    restart: unless-stopped
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -70,6 +70,7 @@ services:
       - laravel-net
     depends_on:
       - db
+    restart: unless-stopped
 
 networks:
   laravel-net:
