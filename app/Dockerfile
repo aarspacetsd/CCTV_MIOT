@@ -1,6 +1,6 @@
 # app/Dockerfile
-# Gunakan base image resmi PHP 8.1 FPM Alpine
-FROM php:8.1-fpm-alpine
+# PENTING: Versi PHP diubah dari 8.1 ke 8.2 agar sesuai dengan composer.json
+FROM php:8.2-fpm-alpine
 
 # Set working directory
 WORKDIR /var/www/html
