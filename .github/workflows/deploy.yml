@@ -33,19 +33,6 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/cctv-miot:latest # Ganti dengan nama image Anda
 
-      # Langkah 4: Deploy ke server melalui SSH
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: 22
-          script: |
-            cd /path/to/your/project # Ganti dengan path ke direktori proyek di server Anda
-            git pull origin main
-            docker-compose -f docker-compose.yml --env-file .env.docker pull
-            docker-compose -f docker-compose.yml --env-file .env.docker up -d --remove-orphans
-
-            # Perintah untuk membersihkan image lama yang tidak terpakai
-            docker image prune -f
+      # Langkah 4: Trigger Portainer webhook untuk redeploy stack
+      - name: Trigger Portainer Redeploy
+        run: curl -X POST ${{ secrets.PORTAINER_WEBHOOK_URL }}
