@@ -8,8 +8,6 @@ COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 
 WORKDIR /var/www/html
 
-# PERBAIKAN: Salin folder public dari proyek Anda
-# Ini termasuk file CSS/JS hasil build dan link storage
-COPY public ./public
+# Baris 'COPY public' dihapus karena kita akan menggunakan volume bersama
 
 EXPOSE 80
