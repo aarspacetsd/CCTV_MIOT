@@ -1,10 +1,7 @@
 # docker-compose.yml
-# File ini mendefinisikan dan mengonfigurasi semua layanan yang dibutuhkan aplikasi Anda.
-
 version: '3.8'
 
 services:
-  # Layanan Aplikasi Laravel (PHP-FPM)
   app:
     build:
       context: .
@@ -12,22 +9,21 @@ services:
     container_name: laravel_app
     restart: unless-stopped
     working_dir: /var/www/html
-    volumes:
-      - ./:/var/www/html
     # --- PERUBAHAN DI SINI ---
-    # Memberitahu Docker Compose untuk memuat variabel dari file .env.docker
-    # dan menyuntikkannya ke dalam kontainer ini.
+    # Hapus volume mount untuk kode. Kode sekarang ada di dalam image.
+    # volumes:
+    #   - ./:/var/www/html
     env_file:
       - .env.docker
     networks:
       - laravel-network
+    depends_on: # Tambahkan ini agar app menunggu db
+      - db
 
-  # Layanan Database MySQL
   db:
     image: mysql:8.0
     container_name: laravel_db
     restart: unless-stopped
-    # Variabel environment untuk database juga diambil dari .env.docker
     env_file:
       - .env.docker
     volumes:
@@ -37,7 +33,6 @@ services:
     networks:
       - laravel-network
 
-  # Layanan Web Server Nginx
   nginx:
     image: nginx:alpine
     container_name: laravel_nginx
@@ -45,7 +40,7 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./:/var/www/html
+      - ./:/var/www/html # Volume ini tetap ada untuk Nginx agar bisa mengakses file public
       - ./nginx:/etc/nginx/conf.d
     depends_on:
       - app
