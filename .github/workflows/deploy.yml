@@ -26,7 +26,7 @@ jobs:
           file: ./app/Dockerfile # Path ke Dockerfile Anda
           push: true
           # Ganti 'your-dockerhub-username/your-app-name' dengan nama image Anda
-          tags: AARCSTI20/cctv-miot-app:latest
+          tags: aarcsti/cctv-miot-app:latest
 
       - name: Trigger Portainer Webhook
         run: curl -X POST ${{ secrets.PORTAINER_WEBHOOK_URL }}

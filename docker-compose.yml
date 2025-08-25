@@ -6,7 +6,7 @@ services:
   app:
     # PENTING: Opsi 'build' dihapus. Image akan diambil dari registry.
     # Ganti 'your-dockerhub-username/your-app-name' dengan nama image Anda di Docker Hub.
-    image: AARCSTI20/cctv-miot-app:latest
+    image: aarcsti/cctv-miot-app:latest
     working_dir: /var/www/html
     volumes:
       # Kode sekarang ada di dalam image, jadi kita hanya butuh volume untuk storage.
