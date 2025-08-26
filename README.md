@@ -191,7 +191,7 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di lingkungan lokal A
 3.  **Akun Default:**
     Anda bisa login menggunakan akun yang Anda buat atau yang berasal dari seeder.
     - **Admin**:
-      - Email: `admin@example.com`
+      - Email: `admin@gmail.com`
       - Password: `password`
 
 ---
