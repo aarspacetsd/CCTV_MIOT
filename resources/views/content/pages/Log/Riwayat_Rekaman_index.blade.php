@@ -14,7 +14,7 @@
         <h5 class="card-header">Pilih Kamera</h5>
         <div class="list-group list-group-flush">
             @forelse($cameras as $camera)
-                <a href="{{ route('log.history.folders', $camera->id) }}"
+                <a href="{{ route('log.history.explorer', $camera->id) }}"
                     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
                         <i class="ti ti-camera ti-lg me-3 text-primary"></i>

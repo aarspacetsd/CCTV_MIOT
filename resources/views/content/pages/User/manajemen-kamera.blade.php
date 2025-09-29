@@ -2,95 +2,100 @@
 
 @section('title', 'Manajemen Kamera Saya')
 
-{{-- Vendor Styles --}}
+{{-- Vendor Styles untuk DataTables --}}
 @section('vendor-style')
     @vite(['resources/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.scss', 'resources/assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.scss', 'resources/assets/vendor/libs/datatables-buttons-bs5/buttons.bootstrap5.scss'])
 @endsection
 
-{{-- Vendor Scripts --}}
+{{-- Vendor Scripts untuk DataTables --}}
 @section('vendor-script')
-    @vite(['resources/assets/vendor/libs/jquery/jquery.js', 'resources/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js'])
+    @vite(['resources/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js'])
 @endsection
 
 {{-- Page Scripts --}}
 @section('page-script')
     <script>
-        window.addEventListener('load', function() {
-            $(function() {
-                const dataUrl = "{{ route('user.my-cameras.data') }}";
+        document.addEventListener('DOMContentLoaded', function() {
+            const dataUrl = "{{ route('user.my-cameras.data') }}";
 
-                var dt_basic = $('.datatables-basic').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: dataUrl,
-                    columns: [{
-                            data: 'id',
-                            name: 'id',
-                            visible: false
-                        },
-                        {
-                            data: 'name',
-                            name: 'name',
-                            title: 'Nama Kamera'
-                        },
-                        {
-                            data: 'device_id',
-                            name: 'device_id',
-                            title: 'Device ID'
-                        },
-                        {
-                            data: 'is_active',
-                            name: 'is_active',
-                            title: 'Status',
-                            render: function(data, type, full, meta) {
-                                var status = {
-                                    1: {
-                                        title: 'Aktif',
-                                        class: 'bg-label-success'
-                                    },
-                                    0: {
-                                        title: 'Nonaktif',
-                                        class: 'bg-label-danger'
-                                    }
-                                };
-                                return '<span class="badge ' + status[data].class + '">' +
-                                    status[data].title + '</span>';
-                            }
-                        },
-                        {
-                            data: 'action',
-                            name: 'action',
-                            title: 'Aksi',
-                            orderable: false,
-                            searchable: false
+            var dt_basic = $('.datatables-basic').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: dataUrl,
+                columns: [{
+                        data: 'id',
+                        name: 'id',
+                        visible: false
+                    },
+                    {
+                        data: 'name',
+                        name: 'name',
+                        title: 'Nama Kamera'
+                    },
+                    {
+                        data: 'device_id',
+                        name: 'device_id',
+                        title: 'Device ID'
+                    },
+                    {
+                        data: 'is_active',
+                        name: 'is_active',
+                        title: 'Status',
+                        render: function(data, type, full, meta) {
+                            var status = {
+                                1: {
+                                    title: 'Aktif',
+                                    class: 'bg-label-success'
+                                },
+                                0: {
+                                    title: 'Nonaktif',
+                                    class: 'bg-label-danger'
+                                }
+                            };
+                            // [PERBAIKAN] Mengonversi nilai boolean (true/false) menjadi angka (1/0)
+                            const statusKey = data ? 1 : 0;
+                            return '<span class="badge ' + status[statusKey].class + '">' +
+                                status[statusKey].title + '</span>';
                         }
-                    ],
-                    order: [
-                        [0, 'desc']
-                    ],
-                    dom: '<"card-header flex-column flex-md-row"<"head-label text-center"><"dt-action-buttons text-end pt-3 pt-md-0"B>><"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-                    displayLength: 10,
-                    lengthMenu: [10, 25, 50],
-                    buttons: [{
-                        text: '<i class="ti ti-plus me-sm-1"></i> <span class="d-none d-sm-inline-block">Tambah Kamera</span>',
-                        className: 'create-new btn btn-primary',
-                        action: function(e, dt, node, config) {
-                            window.location.href =
-                                "{{ route('user.cameras.link.create') }}";
-                        }
-                    }],
-                    language: {
-                        search: "Cari:",
-                        lengthMenu: "_MENU_",
-                        info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ kamera",
-                        paginate: {
-                            next: "Berikutnya",
-                            previous: "Sebelumnya"
-                        }
+                    },
+                    {
+                        data: 'action',
+                        name: 'action',
+                        title: 'Aksi',
+                        orderable: false,
+                        searchable: false
                     }
-                });
-                $('div.head-label').html('<h5 class="card-title mb-0">Manajemen Kamera Saya</h5>');
+                ],
+                order: [
+                    [0, 'desc']
+                ],
+                dom: '<"card-header flex-column flex-md-row"<"head-label text-center"><"dt-action-buttons text-end pt-3 pt-md-0"B>><"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                displayLength: 10,
+                lengthMenu: [10, 25, 50],
+                buttons: [{
+                    text: '<i class="ti ti-plus me-sm-1"></i> <span class="d-none d-sm-inline-block">Tambah Kamera</span>',
+                    className: 'create-new btn btn-primary',
+                    action: function(e, dt, node, config) {
+                        window.location.href =
+                            "{{ route('user.cameras.link.create') }}";
+                    }
+                }],
+                language: {
+                    search: "Cari:",
+                    lengthMenu: "_MENU_",
+                    info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ kamera",
+                    paginate: {
+                        next: "Berikutnya",
+                        previous: "Sebelumnya"
+                    }
+                }
             });
+            $('div.head-label').html('<h5 class="card-title mb-0">Manajemen Kamera Saya</h5>');
+
+            // [BARU] Fungsi auto-refresh untuk DataTables
+            setInterval(function() {
+                dt_basic.ajax.reload(null, false); // 'false' menjaga pagination tetap di halaman saat ini
+            }, 10000); // Reload data setiap 10 detik
         });
     </script>
 @endsection
@@ -98,11 +103,11 @@
 @section('content')
 
     {{-- TAMPILAN DAFTAR KAMERA (INDEX) --}}
-    @if (isset($view) && $view == 'index')
+    @if (!isset($view) || (isset($view) && $view == 'index'))
         <div class="card">
             <div class="card-datatable table-responsive pt-0">
                 <table class="datatables-basic table">
-                    {{-- Header dan Body tabel akan dibuat oleh JavaScript --}}
+                    {{-- Header dan Body tabel akan dibuat oleh JavaScript DataTables --}}
                 </table>
             </div>
         </div>

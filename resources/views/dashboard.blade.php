@@ -1,12 +1,75 @@
 @extends('layouts/layoutMaster')
 
-@section('title', 'Dashboard')
+@section('title', 'Dashboard Admin')
 
 @section('page-script')
     <script>
-        // Script ini bisa digunakan nanti untuk memperbarui feed gambar secara real-time
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Dashboard loaded. Real-time feed updater can be initialized here.");
+            // --- Logika untuk update gambar ---
+            function updateCameraFeed(cameraCard) {
+                const imgElement = cameraCard.querySelector('.camera-feed-image');
+                const timestampElement = cameraCard.querySelector('.camera-timestamp');
+                const cameraId = imgElement.dataset.cameraId;
+
+                if (!cameraId) return;
+
+                fetch(`/api/cameras/${cameraId}/latest-image`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (imgElement.src !== data.image_url) {
+                                imgElement.src = data.image_url;
+                            }
+                            if (timestampElement) {
+                                timestampElement.textContent = 'Update: ' + data.captured_at;
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error fetching image for camera ' + cameraId + ':', error));
+            }
+
+            const allCameraCards = document.querySelectorAll('.camera-card');
+            allCameraCards.forEach(updateCameraFeed);
+            setInterval(() => {
+                allCameraCards.forEach(updateCameraFeed);
+            }, 5000); // Update gambar setiap 5 detik
+
+
+            // --- [LOGIKA STATUS BARU] Polling API setiap 10 detik ---
+            function checkCameraStatuses() {
+                fetch('/api/camera-statuses')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(statuses => {
+                        for (const cameraId in statuses) {
+                            const statusBadge = document.getElementById(`camera-status-${cameraId}`);
+                            if (statusBadge) {
+                                const isActive = statuses[cameraId];
+                                if (isActive) {
+                                    statusBadge.classList.remove('bg-label-danger');
+                                    statusBadge.classList.add('bg-label-success');
+                                    statusBadge.textContent = 'Aktif';
+                                } else {
+                                    statusBadge.classList.remove('bg-label-success');
+                                    statusBadge.classList.add('bg-label-danger');
+                                    statusBadge.textContent = 'Offline';
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching camera statuses:', error);
+                    });
+            }
+
+            // Jalankan pengecekan status saat halaman dimuat pertama kali
+            checkCameraStatuses();
+            // Atur interval untuk memeriksa status setiap 10 detik
+            setInterval(checkCameraStatuses, 10000);
         });
     </script>
 @endsection
@@ -78,21 +141,24 @@
     <h5 class="mb-4">Pratinjau Kamera</h5>
     <div class="row g-4">
         @forelse($cameras as $camera)
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 camera-card">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between">
                         <h5 class="card-title mb-0">{{ $camera->name }}</h5>
-                        @if ($camera->is_active)
-                            <span class="badge bg-label-success">Aktif</span>
-                        @else
-                            <span class="badge bg-label-danger">Offline</span>
-                        @endif
+                        {{-- [PERBAIKAN] Menggunakan ID unik untuk setiap badge --}}
+                        <span class="badge {{ $camera->is_active ? 'bg-label-success' : 'bg-label-danger' }}"
+                            id="camera-status-{{ $camera->id }}">
+                            {{ $camera->is_active ? 'Aktif' : 'Offline' }}
+                        </span>
                     </div>
                     <div class="card-body text-center">
                         @php
                             $latestImage = $camera->imageRecords->first();
                         @endphp
-                        <img class="img-fluid rounded" style="height: 180px; width: 100%; object-fit: cover;"
+                        {{-- [PERBAIKAN] Menambahkan data-camera-id untuk JS --}}
+                        <img class="img-fluid rounded camera-feed-image"
+                            style="height: 180px; width: 100%; object-fit: cover;" id="camera-feed-{{ $camera->id }}"
+                            data-camera-id="{{ $camera->id }}"
                             src="{{ $latestImage ? \Illuminate\Support\Facades\Storage::url($latestImage->path) : 'https://placehold.co/600x400/293445/FFFFFF?text=No+Image' }}"
                             alt="Live feed untuk {{ $camera->name }}">
                     </div>
@@ -100,7 +166,7 @@
                         <small class="text-muted camera-timestamp">
                             Update: {{ $latestImage ? $latestImage->captured_at->format('H:i:s') . ' WIB' : 'N/A' }}
                         </small>
-                        <a href="{{ route('log.history.folders', $camera->id) }}"
+                        <a href="{{ route('log.history.explorer', $camera->id) }}"
                             class="btn btn-sm btn-outline-primary">Riwayat</a>
                     </div>
                 </div>
@@ -111,7 +177,6 @@
                     <div class="card-body text-center">
                         <h5 class="card-title">Belum Ada Kamera</h5>
                         <p class="card-text">Silakan daftarkan perangkat kamera baru untuk memulai pemantauan.</p>
-                        {{-- FIX: Hanya tampilkan tombol ini untuk pengguna dengan peran 'admin' --}}
                         @role('admin')
                             <a href="{{ route('admin.cameras.create') }}" class="btn btn-primary">
                                 <i class="ti ti-plus me-1"></i> Tambah Kamera

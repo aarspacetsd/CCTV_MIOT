@@ -9,145 +9,165 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class RiwayatRekamanController extends Controller
 {
+  /**
+   * Menampilkan halaman awal untuk memilih kamera.
+   */
   public function index()
   {
     $cameras = Auth::user()->cameras()->latest()->paginate(10);
     return view('content.pages.Log.Riwayat_Rekaman_index', compact('cameras'));
   }
 
-  public function showFolders(Camera $camera)
+  /**
+   * Fungsi utama untuk menampilkan riwayat dalam mode "explorer".
+   *
+   * @param \App\Models\Camera $camera
+   * @param string|null $date (Format: YYYY-MM-DD)
+   * @param string|null $hour (Format: HH)
+   * @param string|null $minute (Format: MM)
+   * @param string|null $chunk (Halaman/grup gambar)
+   * @return \Illuminate\View\View
+   */
+  public function showExplorer(Request $request, Camera $camera, $date = null, $hour = null, $minute = null, $chunk = null)
   {
     $this->authorize('update', $camera);
-    return view('content.pages.Log.Riwayat_Rekaman', compact('camera'));
-  }
 
-  public function getFoldersData(Request $request, Camera $camera)
-  {
-    $this->authorize('update', $camera);
+    // BARU: Ambil data jam & menit yang tersedia untuk filter
+    $availableTimes = [];
+    if ($date) {
+      $timeSlots = ImageRecord::where('camera_id', $camera->id)
+        ->whereDate('captured_at', $date)
+        ->select(DB::raw('DISTINCT HOUR(captured_at) as hour, MINUTE(captured_at) as minute'))
+        ->orderBy('hour')->orderBy('minute')
+        ->get();
 
-    $query = ImageRecord::where('camera_id', $camera->id)
-      ->select(
-        DB::raw('DATE(captured_at) as date'),
-        DB::raw('count(*) as record_count')
-      )
-      ->groupBy('date');
-
-    $totalRecords = $query->get()->count();
-
-    // Handle sorting
-    $orderColumnIndex = $request->input('order.0.column');
-    $orderDir = $request->input('order.0.dir');
-    $columns = $request->input('columns');
-    $orderColumnName = $columns[$orderColumnIndex]['name'] ?? 'date';
-
-    // FIX: Ganti 'group_month' dengan 'date' untuk sorting di database
-    if ($orderColumnName === 'group_month') {
-      $orderColumnName = 'date';
-    }
-    $query->orderBy($orderColumnName, $orderDir);
-
-    // Handle pagination
-    $records = $query->skip($request->input('start'))
-      ->take($request->input('length'))
-      ->get();
-
-    $data = [];
-    foreach ($records as $record) {
-      $dateObj = \Carbon\Carbon::parse($record->date);
-      $data[] = [
-        'date' => $record->date,
-        'group_month' => $dateObj->translatedFormat('F Y'),
-        'formatted_date' => $dateObj->translatedFormat('l, j F Y'),
-        'record_count' => $record->record_count . ' gambar',
-        'action' => '<a href="' . route('log.history.images', ['camera' => $camera->id, 'date' => $record->date]) . '" class="btn btn-sm btn-primary">Lihat Detail</a>'
-      ];
+      foreach ($timeSlots as $slot) {
+        $hourKey = str_pad($slot->hour, 2, '0', STR_PAD_LEFT);
+        $minuteValue = str_pad($slot->minute, 2, '0', STR_PAD_LEFT);
+        if (!isset($availableTimes[$hourKey])) {
+          $availableTimes[$hourKey] = [];
+        }
+        $availableTimes[$hourKey][] = $minuteValue;
+      }
     }
 
-    return response()->json([
-      'draw' => intval($request->input('draw')),
-      'recordsTotal' => $totalRecords,
-      'recordsFiltered' => $totalRecords,
-      'data' => $data,
-    ]);
-  }
+    $imagesPerChunk = 30;
 
-  public function showImages(Request $request, Camera $camera, $date)
-  {
-    $this->authorize('update', $camera);
-    try {
-      $formattedDate = \Carbon\Carbon::parse($date)->format('Y-m-d');
-    } catch (\Exception $e) {
-      abort(404, 'Format tanggal tidak valid.');
-    }
-    return view('content.pages.Log.Riwayat_Rekaman_Detail', compact('camera', 'formattedDate'));
-  }
+    $viewData = [
+      'camera' => $camera,
+      'breadcrumbs' => $this->generateBreadcrumbs($camera, $date, $hour, $minute, $chunk),
+      'filter' => [
+        'date' => $date,
+        'hour' => $hour,
+        'minute' => $minute,
+        'chunk' => $chunk,
+      ],
+      'availableTimes' => $availableTimes, // BARU: Kirim data ke view
+    ];
 
-  public function getImagesData(Request $request, Camera $camera, $date)
-  {
-    $this->authorize('update', $camera);
-    try {
-      $formattedDate = \Carbon\Carbon::parse($date)->format('Y-m-d');
-    } catch (\Exception $e) {
-      return response()->json(['error' => 'Format tanggal tidak valid.'], 400);
-    }
-    $query = ImageRecord::where('camera_id', $camera->id)
-      ->whereDate('captured_at', $formattedDate);
-    $totalRecords = $query->count();
-    if ($request->filled('search.value')) {
-      $searchValue = $request->input('search.value');
-      $query->where(function ($q) use ($searchValue) {
-        $q->whereTime('captured_at', 'like', '%' . $searchValue . '%');
+    $query = ImageRecord::where('camera_id', $camera->id);
+
+    if ($date && $hour && $minute) {
+      $minuteQuery = $query->clone()->whereDate('captured_at', $date)
+        ->where(DB::raw('HOUR(captured_at)'), $hour)
+        ->where(DB::raw('MINUTE(captured_at)'), $minute);
+      $totalImagesInMinute = $minuteQuery->count();
+      if ($chunk || $totalImagesInMinute <= $imagesPerChunk) {
+        $viewData['level'] = 'gallery';
+        $skip = $chunk ? ($chunk - 1) * $imagesPerChunk : 0;
+        $images = $minuteQuery->orderBy('captured_at', 'asc')->skip($skip)->take($imagesPerChunk)->get()->map(function ($image) {
+          return [
+            'url' => Storage::url($image->path),
+            'time' => Carbon::parse($image->captured_at)->format('H:i:s'),
+            'name' => basename($image->path),
+          ];
+        });
+        $viewData['items'] = $images;
+      } else {
+        $viewData['level'] = 'chunk';
+        $numberOfChunks = ceil($totalImagesInMinute / $imagesPerChunk);
+        $chunks = [];
+        for ($i = 1; $i <= $numberOfChunks; $i++) {
+          $startRange = ($i - 1) * $imagesPerChunk + 1;
+          $endRange = min($i * $imagesPerChunk, $totalImagesInMinute);
+          $imageCountInThisChunk = ($endRange - $startRange) + 1;
+          $chunks[] = [
+            'name' => "Rekaman $startRange - $endRange",
+            'url' => route('log.history.explorer', ['camera' => $camera->id, 'date' => $date, 'hour' => $hour, 'minute' => $minute, 'chunk' => $i]),
+            'count' => $imageCountInThisChunk,
+          ];
+        }
+        $viewData['items'] = $chunks;
+      }
+    } elseif ($date && $hour) {
+      $viewData['level'] = 'minute';
+      $query->whereDate('captured_at', $date)->where(DB::raw('HOUR(captured_at)'), $hour);
+      $minutes = $query->select(DB::raw('MINUTE(captured_at) as minute'), DB::raw('count(*) as count'))->groupBy('minute')->orderBy('minute', 'desc')->get()->map(function ($item) use ($camera, $date, $hour) {
+        return ['name' => 'Menit ' . str_pad($item->minute, 2, '0', STR_PAD_LEFT), 'url' => route('log.history.explorer', ['camera' => $camera->id, 'date' => $date, 'hour' => $hour, 'minute' => str_pad($item->minute, 2, '0', STR_PAD_LEFT)]), 'count' => $item->count];
       });
-    }
-    $filteredRecords = $query->count();
-    $orderColumnIndex = $request->input('order.0.column');
-    $orderDir = $request->input('order.0.dir');
-    $columns = $request->input('columns');
-    $orderColumnName = $columns[$orderColumnIndex]['name'] ?? 'captured_at';
-    if ($orderColumnName === 'group_hour') {
-      $query->orderByRaw('HOUR(captured_at) ' . $orderDir);
+      $viewData['items'] = $minutes;
+    } elseif ($date) {
+      $viewData['level'] = 'hour';
+      $query->whereDate('captured_at', $date);
+      $hours = $query->select(DB::raw('HOUR(captured_at) as hour'), DB::raw('count(*) as count'))->groupBy('hour')->orderBy('hour', 'desc')->get()->map(function ($item) use ($camera, $date) {
+        return ['name' => 'Jam ' . str_pad($item->hour, 2, '0', STR_PAD_LEFT) . ':00', 'url' => route('log.history.explorer', ['camera' => $camera->id, 'date' => $date, 'hour' => str_pad($item->hour, 2, '0', STR_PAD_LEFT)]), 'count' => $item->count];
+      });
+      $viewData['items'] = $hours;
     } else {
-      $query->orderBy($orderColumnName, $orderDir);
+      $viewData['level'] = 'date';
+      $dates = $query->select(DB::raw('DATE(captured_at) as date'), DB::raw('count(*) as count'))->groupBy('date')->orderBy('date', 'desc')->paginate(30);
+      $dates->getCollection()->transform(function ($item) use ($camera) {
+        return ['name' => Carbon::parse($item->date)->translatedFormat('l, j F Y'), 'url' => route('log.history.explorer', ['camera' => $camera->id, 'date' => $item->date]), 'count' => $item->count, 'raw_date' => $item->date];
+      });
+      $viewData['items'] = $dates;
     }
-    $images = $query->skip($request->input('start'))
-      ->take($request->input('length'))
-      ->get();
-    $data = [];
-    foreach ($images as $image) {
-      $hour = $image->captured_at->hour;
-      $data[] = [
-        'id' => $image->id,
-        'group_hour' => 'Jam ' . str_pad($hour, 2, '0', STR_PAD_LEFT) . ':00 - ' . str_pad($hour, 2, '0', STR_PAD_LEFT) . ':59',
-        'path' => Storage::url($image->path),
-        'full_path' => Storage::url($image->path),
-        'time' => $image->captured_at->format('H:i:s'),
-        'action' => '',
-      ];
-    }
-    return response()->json([
-      'draw' => intval($request->input('draw')),
-      'recordsTotal' => $totalRecords,
-      'recordsFiltered' => $filteredRecords,
-      'data' => $data,
-    ]);
+
+    return view('content.pages.Log.Riwayat_Rekaman_Explorer', $viewData);
   }
 
-  public function destroyFolder(Camera $camera, $date)
+  /**
+   * Helper function untuk membuat breadcrumbs navigasi.
+   */
+  private function generateBreadcrumbs(Camera $camera, $date, $hour, $minute, $chunk)
+  {
+    $breadcrumbs = [['name' => $camera->name, 'url' => route('log.history.explorer', $camera->id)]];
+    if ($date) {
+      $breadcrumbs[] = ['name' => Carbon::parse($date)->translatedFormat('j M Y'), 'url' => route('log.history.explorer', ['camera' => $camera->id, 'date' => $date])];
+    }
+    if ($date && $hour) {
+      $breadcrumbs[] = ['name' => 'Jam ' . $hour . ':00', 'url' => route('log.history.explorer', ['camera' => $camera->id, 'date' => $date, 'hour' => $hour])];
+    }
+    if ($date && $hour && $minute) {
+      $breadcrumbs[] = ['name' => 'Menit ' . $minute, 'url' => route('log.history.explorer', ['camera' => $camera->id, 'date' => $date, 'hour' => $hour, 'minute' => $minute])];
+    }
+    if ($date && $hour && $minute && $chunk) {
+      $breadcrumbs[] = ['name' => 'Grup Rekaman', 'url' => null];
+    }
+    return $breadcrumbs;
+  }
+
+  /**
+   * Menghapus semua rekaman & file pada tanggal tertentu.
+   */
+  public function destroyFolder(Request $request, Camera $camera)
   {
     $this->authorize('delete', $camera);
+    $dateToDelete = $request->input('date');
+    if (!$dateToDelete) {
+      return back()->with('error', 'Tanggal tidak valid.');
+    }
     try {
-      $formattedDate = \Carbon\Carbon::parse($date)->format('Y-m-d');
+      $formattedDate = Carbon::parse($dateToDelete)->format('Y-m-d');
     } catch (\Exception $e) {
       return back()->with('error', 'Format tanggal tidak valid.');
     }
-    ImageRecord::where('camera_id', $camera->id)
-      ->whereDate('captured_at', $formattedDate)
-      ->delete();
+    ImageRecord::where('camera_id', $camera->id)->whereDate('captured_at', $formattedDate)->delete();
     $directory = "camera_images/{$camera->device_id}/{$formattedDate}";
     Storage::disk('public')->deleteDirectory($directory);
-    return back()->with('success', 'Semua rekaman untuk tanggal ' . $formattedDate . ' berhasil dihapus.');
+    return redirect()->route('log.history.explorer', $camera->id)->with('success', 'Semua rekaman untuk tanggal ' . $formattedDate . ' berhasil dihapus.');
   }
 }

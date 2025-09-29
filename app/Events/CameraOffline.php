@@ -5,20 +5,16 @@ namespace App\Events;
 use App\Models\Camera;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-// UBAH BARIS INI
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-// DAN UBAH BARIS INI
-class CameraOnline implements ShouldBroadcastNow
+class CameraOffline implements ShouldBroadcast
 {
   use Dispatchable, InteractsWithSockets, SerializesModels;
 
   /**
-   * Create a new event instance.
-   *
-   * @param \App\Models\Camera $camera
+   * Buat instance event baru.
    */
   public function __construct(
     public Camera $camera
@@ -27,7 +23,7 @@ class CameraOnline implements ShouldBroadcastNow
   }
 
   /**
-   * Get the channels the event should broadcast on.
+   * Dapatkan channel tempat event ini akan disiarkan.
    *
    * @return array<int, \Illuminate\Broadcasting\Channel>
    */
@@ -39,20 +35,21 @@ class CameraOnline implements ShouldBroadcastNow
   }
 
   /**
-   * The event's broadcast name.
+   * Nama event yang akan didengarkan oleh frontend.
    */
   public function broadcastAs(): string
   {
-    return 'camera.online';
+    return 'camera.offline';
   }
 
   /**
-   * Get the data to broadcast.
+   * Dapatkan data yang akan di-broadcast.
    *
    * @return array
    */
   public function broadcastWith(): array
   {
-    return $this->camera->toArray();
+    // Kita hanya perlu mengirim ID, karena frontend hanya perlu tahu kamera mana yang offline.
+    return ['id' => $this->camera->id];
   }
 }

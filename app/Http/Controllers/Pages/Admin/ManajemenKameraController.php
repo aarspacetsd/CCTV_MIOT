@@ -7,6 +7,7 @@ use App\Models\Camera;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use SimpleSoftwareIO\QrCode\Facades\QrCode; // 1. Tambahkan use statement ini
 
 class ManajemenKameraController extends Controller
 {
@@ -98,5 +99,22 @@ class ManajemenKameraController extends Controller
 
     // FIX: Menggunakan nama route yang benar
     return redirect()->route('admin.cameras.index')->with('success', 'Kamera berhasil dihapus.');
+  }
+
+  /**
+   * [BARU] Menghasilkan dan mengunduh QR Code untuk device_id kamera.
+   */
+  public function downloadQrCode(Camera $camera)
+  {
+    $this->authorize('view', $camera);
+
+    // Menghasilkan QR code dalam format PNG
+    $svg = \QrCode::format('svg')->size(300)->generate($camera->device_id);
+
+    $fileName = 'qrcode-device-' . $camera->name . '.svg';
+
+    return response($svg)
+      ->header('Content-Type', 'image/svg+xml')
+      ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
   }
 }

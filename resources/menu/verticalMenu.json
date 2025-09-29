@@ -4,32 +4,23 @@
       "name": "Dashboard",
       "icon": "menu-icon tf-icons ti ti-smart-home",
       "url": "/dashboard",
-      "slug": "dashboard-admin",
+      "slug": "dashboard",
       "role": [
-        "admin"
-      ]
-    },
-    {
-      "name": "Dashboard",
-      "icon": "menu-icon tf-icons ti ti-smart-home",
-      "url": "/dashboard/user/dashboard",
-      "slug": "dashboard-user",
-      "role": [
+        "admin",
         "user"
       ]
     },
     {
-      "url": "#",
-      "icon": "menu-icon tf-icons ti ti-user",
-      "name": "Admin",
-      "slug": "admin",
+      "name": "Camera Management",
+      "icon": "menu-icon tf-icons ti ti-camera",
+      "slug": "camera-management",
       "role": [
         "admin"
       ],
       "submenu": [
         {
           "url": "/dashboard/admin/cameras",
-          "name": "Manage Camera",
+          "name": "Camera List",
           "slug": "admin-cameras"
         },
         {
@@ -40,73 +31,9 @@
       ]
     },
     {
-      "url": "#",
-      "name": "ML",
-      "icon": "menu-icon tf-icons ti ti-users-group",
-      "slug": "ml",
-      "target": "_blank",
-      "role": [
-        "admin"
-      ],
-      "submenu": [
-        {
-          "url": "/dashboard/ml/detection-log",
-          "name": "Log Deteksi",
-          "slug": "detection-log"
-        }
-      ]
-    },
-    {
-      "url": "#",
-      "name": "Log",
-      "icon": "menu-icon tf-icons ti ti-file-type-pdf",
-      "slug": "log",
-      "target": "_blank",
-      "role": [
-        "admin",
-        "user"
-      ],
-      "submenu": [
-        {
-          "url": "/dashboard/log/history",
-          "name": "Riwayat Rekaman",
-          "slug": "riwayat-rekaman"
-        },
-        {
-          "url": "/dashboard/log/activities",
-          "name": "Log Aktifitas",
-          "slug": "log-aktifitas"
-        }
-      ]
-    },
-    {
-      "url": "#",
-      "name": "Setting",
-      "icon": "menu-icon tf-icons ti ti-settings",
-      "slug": "settings",
-      "target": "_blank",
-      "role": [
-        "admin"
-      ],
-      "submenu": [
-        {
-          "url": "/dashboard/settings/users",
-          "name": "Manage User",
-          "slug": "settings-users"
-        },
-        {
-          "url": "/dashboard/settings/roles",
-          "name": "Manage Role",
-          "slug": "settings-roles"
-        }
-      ]
-    },
-    {
-      "url": "#",
-      "name": "Device",
-      "icon": "menu-icon tf-icons ti ti-users-group",
-      "slug": "device-camera",
-      "target": "_blank",
+      "name": "My Devices",
+      "icon": "menu-icon tf-icons ti ti-device-mobile",
+      "slug": "user-devices",
       "role": [
         "user"
       ],
@@ -120,6 +47,62 @@
           "url": "/dashboard/user/my-cameras",
           "name": "Device List",
           "slug": "device-list"
+        }
+      ]
+    },
+    {
+      "name": "AI Analytics",
+      "icon": "menu-icon tf-icons ti ti-brain",
+      "slug": "ai-analytics",
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/ml/detection-log",
+          "name": "Detection Log",
+          "slug": "detection-log"
+        }
+      ]
+    },
+    {
+      "name": "Event Logs",
+      "icon": "menu-icon tf-icons ti ti-file-text",
+      "slug": "event-logs",
+      "role": [
+        "admin",
+        "user"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/log/history",
+          "name": "Recording History",
+          "slug": "recording-history"
+        },
+        {
+          "url": "/dashboard/log/activities",
+          "name": "Activity Log",
+          "slug": "activity-log"
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "icon": "menu-icon tf-icons ti ti-settings",
+      "slug": "settings",
+      "role": [
+        "admin"
+      ],
+      "submenu": [
+        {
+          "url": "/dashboard/settings/users",
+          "name": "User Management",
+          "slug": "settings-users"
+        },
+        {
+          "url": "/dashboard/settings/roles",
+          "name": "Role Management",
+          "slug": "settings-roles"
         }
       ]
     }

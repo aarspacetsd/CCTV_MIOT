@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ApiController;
 
 // Dashboard
 use App\Http\Controllers\Pages\UserDashboardController;
@@ -38,6 +39,12 @@ Route::get('/', function () {
   return view('auth.login');
 });
 
+// --- [BARU] Grup untuk API internal yang dipanggil dari frontend (misal: dashboard) ---
+Route::middleware(['auth'])->prefix('api')->group(function () {
+    Route::get('/camera-statuses', [ApiController::class, 'getCameraStatuses'])->name('api.statuses');
+});
+
+
 // --- Route Group Utama untuk Dashboard ---
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
 
@@ -47,6 +54,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
   // Grup untuk URL /dashboard/admin/*
   Route::prefix('admin')->name('admin.')->group(function () {
     Route::resource('cameras', ManajemenKameraController::class);
+    Route::get('cameras/{camera}/qrcode', [ManajemenKameraController::class, 'downloadQrCode'])
+      ->name('cameras.qrcode');
     Route::get('/notifications', [NotifikasiPeringatanController::class, 'index'])->name('notifications.index');
   });
 
@@ -57,15 +66,37 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
 
   // Grup untuk URL /dashboard/log/*
   Route::prefix('log')->name('log.')->group(function () {
-    Route::get('/history', [RiwayatRekamanController::class, 'index'])->name('history.index');
+    // Rute ini tidak berhubungan dengan riwayat, jadi biarkan saja
     Route::get('/activities', [LogAktifitasController::class, 'index'])->name('activities.index');
-    Route::prefix('cameras/{camera}/history')->name('history.')->group(function () {
-      Route::get('/', [RiwayatRekamanController::class, 'showFolders'])->name('folders');
-      Route::get('/folders-data', [RiwayatRekamanController::class, 'getFoldersData'])->name('folders.data');
-      Route::get('/{date}', [RiwayatRekamanController::class, 'showImages'])->name('images');
-      Route::get('/{date}/data', [RiwayatRekamanController::class, 'getImagesData'])->name('data');
-      Route::delete('/{date}', [RiwayatRekamanController::class, 'destroyFolder'])->name('destroyFolder');
-    });
+
+    // --- MULAI MODIFIKASI RIWAYAT REKAMAN ---
+
+    // 1. Rute untuk halaman "Pilih Kamera" (URL: /log/history)
+    // Ini tetap sama, hanya mengarah ke controller.
+    Route::get('/history', [RiwayatRekamanController::class, 'index'])->name('history.index');
+
+    // 2. Rute Explorer Dinamis yang BARU (Menggantikan 5 rute lama)
+    // URL-nya akan menjadi: /log/history/kamera/{id}/{date?}/{hour?}/{minute?}
+    Route::get('/history/kamera/{camera}/{date?}/{hour?}/{minute?}/{chunk?}', [RiwayatRekamanController::class, 'showExplorer'])
+      ->name('history.explorer')
+      ->where([
+        'date'   => '[0-9]{4}-[0-9]{2}-[0-9]{2}',
+        'hour'   => '[0-9]{2}',
+        'minute' => '[0-9]{2}',
+        'chunk'  => '[0-9]+', // Validasi untuk chunk (harus angka)
+      ]);
+
+    // 3. Rute untuk menghapus folder berdasarkan tanggal yang BARU
+    // URL-nya akan menjadi: /log/history/kamera/{id}/hapus-folder
+    Route::delete('/history/kamera/{camera}/hapus-folder', [RiwayatRekamanController::class, 'destroyFolder'])
+      ->name('history.destroy.folder'); // Nama baru untuk rute hapus
+
+    // 4. CATATAN: Semua rute lama di dalam `prefix('cameras/{camera}/history')`
+    // sudah tidak diperlukan lagi dan bisa dihapus dengan aman.
+    // Rute-rute seperti `folders`, `folders.data`, `images`, dll.,
+    // semuanya sudah ditangani oleh satu rute 'history.explorer' di atas.
+
+    // --- SELESAI MODIFIKASI ---
   });
 
   // Grup untuk URL /dashboard/settings/*
@@ -89,6 +120,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::get('/my-cameras/data', [UserManajemenKameraController::class, 'getData'])->name('my-cameras.data');
     Route::resource('my-cameras', UserManajemenKameraController::class)->except(['create', 'store', 'show']);
   });
+});
+Route::get('/test-reverb', function () {
+  return view('test-reverb');
 });
 
 Route::middleware('auth')->group(function () {
