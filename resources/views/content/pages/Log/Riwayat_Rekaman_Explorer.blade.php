@@ -2,9 +2,10 @@
 
 @section('title', 'Riwayat Explorer - ' . $camera->name)
 
-{{-- Tambahkan CSS untuk FancyBox dan Flatpickr --}}
+{{-- [PERBAIKAN] Menggunakan CDN untuk memuat CSS library --}}
 @section('vendor-style')
-    @vite(['node_modules/@fancyapps/ui/dist/fancybox/fancybox.css', 'resources/assets/vendor/libs/flatpickr/flatpickr.scss'])
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 @endsection
 
 @section('page-style')
@@ -55,6 +56,20 @@
             top: 10px;
             right: 10px;
         }
+
+        /* [BARU] CSS untuk memberikan tanda/marker pada tanggal di kalender */
+        .flatpickr-day.has-records {
+            background: #e9defb;
+            border-color: #e9defb;
+            color: #7367f0;
+            font-weight: bold;
+        }
+
+        .flatpickr-day.today.has-records {
+            background: #7367f0;
+            border-color: #7367f0;
+            color: #fff;
+        }
     </style>
 @endsection
 
@@ -86,52 +101,47 @@
         </a>
     </div>
 
-    {{-- KARTU FILTER CEPAT --}}
-    @if ($level !== 'date')
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Navigasi Cepat</h5>
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <label for="filter-date" class="form-label">Tanggal</label>
-                        <input type="text" id="filter-date" class="form-control" placeholder="YYYY-MM-DD"
-                            value="{{ $filter['date'] ?? '' }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="filter-hour" class="form-label">Jam</label>
-                        <select id="filter-hour" class="form-select">
-                            <option value="">-- Pilih Jam --</option>
-                            {{-- BARU: Logika untuk menandai jam yang tersedia --}}
-                            @for ($h = 0; $h < 24; $h++)
-                                @php $hourKey = str_pad($h, 2, '0', STR_PAD_LEFT); @endphp
-                                <option value="{{ $hourKey }}"
-                                    {{ !isset($availableTimes[$hourKey]) ? 'disabled' : '' }}>
-                                    {{ $hourKey }}:00 {{ isset($availableTimes[$hourKey]) ? '✔' : '' }}
-                                </option>
-                            @endfor
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="filter-minute" class="form-label">Menit</label>
-                        <select id="filter-minute" class="form-select">
-                            <option value="">-- Pilih Menit --</option>
-                            {{-- BARU: Dibuat disable, akan diaktifkan oleh JS --}}
-                            @for ($m = 0; $m < 60; $m++)
-                                <option value="{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}" disabled>
-                                    {{ str_pad($m, 2, '0', STR_PAD_LEFT) }}
-                                </option>
-                            @endfor
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button id="filter-go-btn" class="btn btn-primary w-100">
-                            <i class="ti ti-player-play me-1"></i>Search
-                        </button>
-                    </div>
+    {{-- Kartu Filter Cepat --}}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Navigasi Cepat</h5>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="filter-date" class="form-label">Tanggal</label>
+                    <input type="text" id="filter-date" class="form-control" placeholder="YYYY-MM-DD"
+                        value="{{ $filter['date'] ?? '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="filter-hour" class="form-label">Jam</label>
+                    <select id="filter-hour" class="form-select">
+                        <option value="">-- Pilih Jam --</option>
+                        @for ($h = 0; $h < 24; $h++)
+                            @php $hourKey = str_pad($h, 2, '0', STR_PAD_LEFT); @endphp
+                            <option value="{{ $hourKey }}" {{ !isset($availableTimes[$hourKey]) ? 'disabled' : '' }}>
+                                {{ $hourKey }}:00 {{ isset($availableTimes[$hourKey]) ? '✔' : '' }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter-minute" class="form-label">Menit</label>
+                    <select id="filter-minute" class="form-select">
+                        <option value="">-- Pilih Menit --</option>
+                        @for ($m = 0; $m < 60; $m++)
+                            <option value="{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}" disabled>
+                                {{ str_pad($m, 2, '0', STR_PAD_LEFT) }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button id="filter-go-btn" class="btn btn-primary w-100">
+                        <i class="ti ti-player-play me-1"></i>Search
+                    </button>
                 </div>
             </div>
         </div>
-    @endif
+    </div>
 
     {{-- Tampilan Konten Dinamis --}}
     <div class="card">
@@ -212,30 +222,64 @@
     </div>
 @endsection
 
+{{-- [PERBAIKAN] Menggunakan CDN untuk memuat JS library --}}
 @section('vendor-script')
-    @vite(['resources/assets/js/vendors/fancybox.js', 'resources/assets/vendor/libs/flatpickr/flatpickr.js'])
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 @endsection
 
+{{-- [PERBAIKAN] Memindahkan semua logika JS ke dalam Blade file --}}
 @section('page-script')
     <script>
-        // BARU: Kirim data dari PHP ke JavaScript
+        // Mengirimkan data dari PHP ke JavaScript
+        const allAvailableDates = @json($allAvailableDates ?? []);
         const availableTimes = @json($availableTimes ?? []);
+        const explorerFilters = @json($filter ?? []);
+        const explorerBaseUrl = "{{ route('log.history.explorer', $camera->id) }}";
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Inisialisasi Fancybox
+            Fancybox.bind('[data-fancybox="gallery"]', {});
+
+            // Inisialisasi Flatpickr dan logika filter
             const filterDateInput = document.getElementById('filter-date');
             if (filterDateInput) {
+                // [BARU] Fungsi terpisah untuk menandai tanggal, agar bisa dipanggil ulang
+                function markAvailableDays(instance) {
+                    const dayElements = instance.days.childNodes;
+                    dayElements.forEach(function(dayElem) {
+                        const y = dayElem.dateObj.getFullYear();
+                        const m = String(dayElem.dateObj.getMonth() + 1).padStart(2, '0');
+                        const d = String(dayElem.dateObj.getDate()).padStart(2, '0');
+                        const dateString = `${y}-${m}-${d}`;
+
+                        if (allAvailableDates.includes(dateString)) {
+                            dayElem.classList.add("has-records");
+                        }
+                    });
+                }
+
                 flatpickr(filterDateInput, {
                     dateFormat: 'Y-m-d',
                     altInput: true,
                     altFormat: 'd F Y',
+                    // [PERBAIKAN] Menggunakan hook onReady dan onMonthChange untuk memastikan penanda selalu ada
+                    onReady: function(selectedDates, dateStr, instance) {
+                        markAvailableDays(instance);
+                    },
+                    onMonthChange: function(selectedDates, dateStr, instance) {
+                        // Diberi sedikit delay agar kalender selesai menggambar ulang sebelum ditandai
+                        setTimeout(() => {
+                            markAvailableDays(instance);
+                        }, 200);
+                    },
                 });
 
                 const hourSelect = document.getElementById('filter-hour');
                 const minuteSelect = document.getElementById('filter-minute');
-                const currentHour = "{{ $filter['hour'] ?? '' }}";
-                const currentMinute = "{{ $filter['minute'] ?? '' }}";
+                const currentHour = explorerFilters.hour || '';
+                const currentMinute = explorerFilters.minute || '';
 
-                // BARU: Fungsi untuk memperbarui opsi menit
                 function updateMinuteOptions() {
                     const selectedHour = hourSelect.value;
                     const availableMinutesForHour = availableTimes[selectedHour] || [];
@@ -258,13 +302,12 @@
 
                 if (currentHour) {
                     hourSelect.value = currentHour;
-                    updateMinuteOptions(); // Panggil fungsi saat halaman dimuat
+                    updateMinuteOptions();
                     if (currentMinute) {
                         minuteSelect.value = currentMinute;
                     }
                 }
 
-                // BARU: Tambahkan event listener untuk perubahan jam
                 hourSelect.addEventListener('change', updateMinuteOptions);
 
                 document.getElementById('filter-go-btn').addEventListener('click', function() {
@@ -275,8 +318,7 @@
                         alert('Silakan pilih tanggal terlebih dahulu.');
                         return;
                     }
-                    let baseUrl = "{{ route('log.history.explorer', $camera->id) }}";
-                    let finalUrl = `${baseUrl}/${date}`;
+                    let finalUrl = `${explorerBaseUrl}/${date}`;
                     if (hour) {
                         finalUrl += `/${hour}`;
                     }
@@ -288,4 +330,4 @@
             }
         });
     </script>
-    @endsections
+@endsection
