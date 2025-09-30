@@ -1,7 +1,5 @@
 version: "3.9"
 
-name: laravel-stack
-
 x-env: &default-env
   TZ: "Asia/Jakarta"
 
@@ -33,10 +31,11 @@ services:
       - app_vendor:/var/www/html/vendor
       - app_node:/var/www/html/node_modules
       - laravel_public:/var/www/html/public
-      - laravel_storage:/var/www/html/storage       # ⬅️ mount ke storage (bukan storage/app/public)
+      - laravel_storage:/var/www/html/storage         # ✅ satu volume ke /storage
     networks:
       - laravel_net
     healthcheck:
+      # tetap sederhana; php-fpm akan dicek oleh healthcheck web di bawah
       test: ["CMD-SHELL", "php -v >/dev/null 2>&1 || exit 1"]
       interval: 20s
       timeout: 5s
@@ -53,14 +52,15 @@ services:
       - app
     volumes:
       - laravel_public:/var/www/html/public:ro
-      - laravel_storage:/var/www/html/storage:ro   # ⬅️ sama persis path-nya
+      - laravel_storage:/var/www/html/storage:ro      # ✅ sama persis path-nya
     ports:
-      - "${HTTP_PORT:-8080}:80"
+      - "${HTTP_PORT:-8084}:80"                       # ✅ default aman (8084)
     environment:
       <<: *default-env
     networks:
       - laravel_net
     healthcheck:
+      # fcgi sudah diinstall di image nginx:alpine kamu
       test: ["CMD-SHELL", "SCRIPT_NAME=/health SCRIPT_FILENAME=/health REQUEST_METHOD=GET cgi-fcgi -bind -connect app:9000 || exit 1"]
       interval: 20s
       timeout: 10s
@@ -104,6 +104,6 @@ services:
       PMA_PASSWORD: ${DB_PASSWORD:-laravel}
       UPLOAD_LIMIT: 64M
     ports:
-      - "${PHPMYADMIN_PORT:-8081}:80"
+      - "${PHPMYADMIN_PORT:-8085}:80"                 # ✅ default aman (8085)
     networks:
       - laravel_net
