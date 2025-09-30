@@ -34,8 +34,8 @@ FROM base AS vendor
 
 COPY database/ database/
 COPY composer.json composer.lock ./
-# Menginstal dependensi produksi saja
-RUN composer install --no-interaction --no-dev --optimize-autoloader
+# Menginstal dependensi produksi saja TANPA menjalankan skrip post-install
+RUN composer install --no-interaction --no-dev --optimize-autoloader --no-scripts
 
 # --- STAGE 3: Build Aset Frontend ---
 FROM node:18-alpine AS frontend
@@ -55,6 +55,9 @@ WORKDIR /app
 COPY . .
 COPY --from=vendor /app/vendor/ ./vendor/
 COPY --from=frontend /app/public/build/ ./public/build/
+
+# Hasilkan autoloader yang dioptimalkan dan jalankan skrip Composer (seperti package:discover)
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 
 # Atur kepemilikan file agar web server bisa menulis ke folder storage dan bootstrap/cache
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
