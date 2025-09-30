@@ -14,7 +14,7 @@ volumes:
   app_vendor:
   app_node:
   laravel_public:
-  laravel_storage: # TAMBAHKAN VOLUME BARU INI
+  laravel_storage:
 
 services:
   app:
@@ -33,7 +33,7 @@ services:
       - app_vendor:/var/www/html/vendor
       - app_node:/var/www/html/node_modules
       - laravel_public:/var/www/html/public
-      - laravel_storage:/var/www/html/storage/app/public # TAMBAHKAN MOUNT INI
+      - laravel_storage:/var/www/html/storage       # ⬅️ mount ke storage (bukan storage/app/public)
     networks:
       - laravel_net
     healthcheck:
@@ -53,7 +53,7 @@ services:
       - app
     volumes:
       - laravel_public:/var/www/html/public:ro
-      - laravel_storage:/var/www/html/public/storage:ro # TAMBAHKAN MOUNT INI
+      - laravel_storage:/var/www/html/storage:ro   # ⬅️ sama persis path-nya
     ports:
       - "${HTTP_PORT:-8080}:80"
     environment:
