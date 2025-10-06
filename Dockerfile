@@ -1,70 +1,67 @@
-# --- STAGE 1: Base PHP ---
-# Menggunakan base image resmi PHP 8.2 dengan FPM dan Alpine Linux (ringan)
-FROM php:8.2-fpm-alpine AS base
+# --- STAGE 1: Install dependensi Composer ---
+    FROM composer:2 as composer_builder
+    WORKDIR /app
+    COPY database/ database/
+    COPY composer.json composer.lock ./
+    RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --no-dev --optimize-autoloader
 
-# Menginstal library sistem yang umum dibutuhkan Laravel
-RUN apk add --no-cache \
-  curl \
-  zip \
-  unzip \
-  libpng-dev \
-  libjpeg-turbo-dev \
-  freetype-dev \
-  oniguruma-dev \
-  libxml2-dev \
-  supervisor
+    # --- STAGE 2: Build aset frontend (Vite/NPM) ---
+    FROM node:18 as npm_builder
+    WORKDIR /app
+    COPY package.json package-lock.json ./
+    RUN npm install
+    COPY . .
+    RUN npm run build
 
-# Menginstal ekstensi PHP yang umum
-RUN docker-php-ext-install \
-  pdo_mysql \
-  mbstring \
-  exif \
-  pcntl \
-  bcmath \
-  gd \
-  xml
+    # --- STAGE 3: Final Production Image ---
+    FROM php:8.2-fpm-alpine
 
-# Menginstal Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+    # Install dependensi sistem yang dibutuhkan Laravel
+    RUN apk add --no-cache \
+        nginx \
+        supervisor \
+        curl \
+        libzip-dev \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        oniguruma-dev \
+        libxml2-dev
 
-WORKDIR /app
+    # Install ekstensi PHP yang umum digunakan
+    RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+        && docker-php-ext-install \
+        pdo_mysql \
+        zip \
+        gd \
+        exif \
+        pcntl \
+        bcmath \
+        sockets
 
-# --- STAGE 2: Build Dependensi Composer ---
-FROM base AS vendor
+    WORKDIR /var/www/html
 
-COPY database/ database/
-COPY composer.json composer.lock ./
-# Menginstal dependensi produksi saja TANPA menjalankan skrip post-install
-RUN composer install --no-interaction --no-dev --optimize-autoloader --no-scripts
+    # Salin file dari stage sebelumnya
+    COPY --from=composer_builder /app/vendor/ ./vendor/
+    COPY --from=npm_builder /app/public/ ./public/
+    COPY --from=npm_builder /app/public/build/ ./public/build/
+    COPY --from=npm_builder /app/resources/ ./resources/
+    COPY --from=npm_builder /app/storage/ ./storage/
+    COPY --from=npm_builder /app/bootstrap/ ./bootstrap/
+    COPY --from=npm_builder /app/config/ ./config/
+    COPY --from=npm_builder /app/routes/ ./routes/
+    COPY --from=npm_builder /app/app/ ./app/
+    COPY --from=npm_builder /app/.env.example ./.env
+    COPY --from=npm_builder /app/artisan ./artisan
 
-# --- STAGE 3: Build Aset Frontend ---
-FROM node:18-alpine AS frontend
+    # Salin konfigurasi Nginx dan script startup
+    COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+    COPY docker/start.sh /usr/local/bin/start.sh
+    RUN chmod +x /usr/local/bin/start.sh
 
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+    # Atur kepemilikan file agar server web bisa menulis
+    RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- STAGE 4: Final Image ---
-FROM base AS final
+    EXPOSE 80
 
-WORKDIR /app
-
-# Salin semua file aplikasi dan dependensi yang sudah di-build dari stage sebelumnya
-COPY . .
-COPY --from=vendor /app/vendor/ ./vendor/
-COPY --from=frontend /app/public/build/ ./public/build/
-
-# Hasilkan autoloader yang dioptimalkan dan jalankan skrip Composer (seperti package:discover)
-RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
-
-# Atur kepemilikan file agar web server bisa menulis ke folder storage dan bootstrap/cache
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
-RUN chmod -R 775 /app/storage /app/bootstrap/cache
-
-EXPOSE 8000
-
-# Perintah `Start Command` di Coolify akan menangani ini,
-# biasanya dengan menjalankan `php-fpm`
-# CMD ["php-fpm"]
+    ENTRYPOINT ["/usr/local/bin/start.sh"]
