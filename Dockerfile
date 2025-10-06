@@ -60,6 +60,8 @@ COPY --from=npm_builder /app/artisan ./artisan
 # Salin konfigurasi Nginx dan script startup
 COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
 COPY docker/start.sh /usr/local/bin/start.sh
+# FIX: Mengonversi line endings dari Windows (CRLF) ke Unix (LF) untuk mengatasi "exec format error"
+RUN sed -i 's/\r$//' /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 # Atur kepemilikan file agar server web bisa menulis
