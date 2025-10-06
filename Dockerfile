@@ -18,10 +18,12 @@ RUN npm run build
 FROM php:8.2-fpm-alpine
 
 # Install dependensi sistem yang dibutuhkan Laravel
+# FIX: Menambahkan linux-headers yang dibutuhkan untuk ekstensi sockets
 RUN apk add --no-cache \
     nginx \
     supervisor \
     curl \
+    linux-headers \
     libzip-dev \
     libpng-dev \
     libjpeg-turbo-dev \
