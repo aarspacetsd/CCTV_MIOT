@@ -18,11 +18,12 @@ RUN npm run build
 FROM php:8.2-fpm-alpine
 
 # Install dependensi sistem yang dibutuhkan Laravel
-# FIX: Menambahkan linux-headers yang dibutuhkan untuk ekstensi sockets
+# FIX: Menambahkan dos2unix untuk memperbaiki line endings
 RUN apk add --no-cache \
     nginx \
     supervisor \
     curl \
+    dos2unix \
     linux-headers \
     libzip-dev \
     libpng-dev \
@@ -60,8 +61,8 @@ COPY --from=npm_builder /app/artisan ./artisan
 # Salin konfigurasi Nginx dan script startup
 COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
 COPY docker/start.sh /usr/local/bin/start.sh
-# FIX: Mengonversi line endings dari Windows (CRLF) ke Unix (LF) untuk mengatasi "exec format error"
-RUN sed -i 's/\r$//' /usr/local/bin/start.sh
+# FIX: Menggunakan dos2unix yang lebih andal untuk mengonversi line endings
+RUN dos2unix /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 # Atur kepemilikan file agar server web bisa menulis
