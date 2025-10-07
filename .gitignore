@@ -26,3 +26,8 @@ yarn-error.log
 !/public/assets/*
 /public/css
 /public/js
+
+!storage/
+!storage/app/
+!storage/app/public/
+!storage/app/public/**
