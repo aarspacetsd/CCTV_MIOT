@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log; // 1. Tambahkan Log facade
+use Illuminate\Support\Facades\Log;
 
 class Camera extends Model
 {
@@ -22,6 +22,8 @@ class Camera extends Model
     'is_active',
     'websocket_channel_id',
     'last_heartbeat_at',
+    // [PERBAIKAN] Mengaktifkan kolom group_name agar bisa diisi (mass assignable)
+    'group_name',
   ];
 
   protected $hidden = [
@@ -29,7 +31,7 @@ class Camera extends Model
   ];
 
   /**
-   * 2. [BARU] Tambahkan properti $casts.
+   * Tambahkan properti $casts.
    * Ini memastikan Laravel selalu memperlakukan kolom ini sebagai objek Carbon (tanggal/waktu),
    * yang membuat perbandingan waktu lebih andal.
    */
@@ -39,7 +41,6 @@ class Camera extends Model
 
   /**
    * ACCESSOR PRODUKSI: Menentukan status aktif kamera secara dinamis.
-   * Method ini sekarang menggunakan waktu server yang sebenarnya (`now()`).
    *
    * @return bool
    */
@@ -51,10 +52,8 @@ class Camera extends Model
 
     $now = now();
     $lastHeartbeat = $this->last_heartbeat_at;
-    // [PERBAIKAN] Gunakan abs() untuk mendapatkan nilai absolut (selalu positif) dari selisih waktu.
     $diffInSeconds = abs($now->diffInSeconds($lastHeartbeat));
 
-    // 3. [BARU] Tambahkan logging untuk debugging
     Log::info('--- Camera Status Check: ' . $this->name . ' ---');
     Log::info('Current Time (UTC):     ' . $now->toIso8601String());
     Log::info('Last Heartbeat (UTC):   ' . $lastHeartbeat->toIso8601String());

@@ -107,7 +107,7 @@
                 </li>
                 <li>
                     <a class="dropdown-item"
-                        href="{{ Route::has('profile.show') ? route('profile.show') : 'javascript:void(0);' }}">
+                        href="{{ Route::has('profile.show') ? route('profile.profile') : 'javascript:void(0);' }}">
                         <i class="ti ti-user me-3 ti-md"></i><span class="align-middle">My Profile</span>
                     </a>
                 </li>

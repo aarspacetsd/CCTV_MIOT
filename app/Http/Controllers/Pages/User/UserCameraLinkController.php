@@ -57,7 +57,8 @@ class UserCameraLinkController extends Controller
       return back()->withErrors(['device_id' => 'Device ID dari QR code tidak ditemukan atau tidak valid.'])->withInput();
     }
 
-    $user = Auth\user();
+    // PERBAIKAN: Menggunakan Auth::user() bukan Auth\user()
+    $user = Auth::user();
 
     // Cek kepemilikan sebelumnya
     if ($camera->user_id !== null && !$camera->user->hasRole('admin')) {

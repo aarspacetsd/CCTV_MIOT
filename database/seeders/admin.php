@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
-class admin extends Seeder
+class adminseeder extends Seeder
 {
   /**
    * Run the database seeds.

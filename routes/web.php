@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ApiController;
 // Dashboard
 use App\Http\Controllers\Pages\UserDashboardController;
 use App\Http\Controllers\Pages\DashboardController;
+use App\Http\Controllers\Pages\CameraGroupController;
 // --- Controllers Modul Admin (Pages/Admin/) ---
 use App\Http\Controllers\Pages\Admin\ManajemenKameraController;
 use App\Http\Controllers\Pages\Admin\NotifikasiPeringatanController;
@@ -28,9 +29,19 @@ use App\Http\Controllers\Pages\User\UserManajemenKameraController;
 |--------------------------------------------------------------------------
 */
 
+// Route 'dashboard' utama
+Route::get('/dashboard', function () {
+    if (auth()->check()) {
+        if (auth()->user()->hasRole('admin')) {
+            return redirect()->route('dashboard.index');
+        }
+        return redirect()->route('user.dashboard');
+    }
+    return redirect()->route('login');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
 Route::get('/', function () {
   if (auth()->check()) {
-    // Arahkan ke dashboard admin jika rolenya admin, jika tidak ke user dashboard
     if (auth()->user()->hasRole('admin')) {
       return redirect()->route('dashboard.index');
     }
@@ -39,7 +50,7 @@ Route::get('/', function () {
   return view('auth.login');
 });
 
-// --- [BARU] Grup untuk API internal yang dipanggil dari frontend (misal: dashboard) ---
+// --- API internal ---
 Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/camera-statuses', [ApiController::class, 'getCameraStatuses'])->name('api.statuses');
 });
@@ -50,6 +61,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
 
   // Rute untuk Admin Dashboard
   Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
+  Route::post('/groups', [DashboardController::class, 'updateGroups'])->name('dashboard.groups');
 
   // Grup untuk URL /dashboard/admin/*
   Route::prefix('admin')->name('admin.')->group(function () {
@@ -57,46 +69,37 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::get('cameras/{camera}/qrcode', [ManajemenKameraController::class, 'downloadQrCode'])
       ->name('cameras.qrcode');
     Route::get('/notifications', [NotifikasiPeringatanController::class, 'index'])->name('notifications.index');
+
+    // Routes untuk manajemen grup kamera (Admin)
+    Route::prefix('camera-groups')->name('camera-groups.')->group(function () {
+      Route::get('/', [CameraGroupController::class, 'index'])->name('index');
+      Route::post('/', [CameraGroupController::class, 'store'])->name('store');
+      Route::put('/{groupName}', [CameraGroupController::class, 'update'])->name('update');
+      Route::delete('/{groupName}', [CameraGroupController::class, 'destroy'])->name('destroy');
+      Route::post('/assign', [CameraGroupController::class, 'assignCamera'])->name('assign');
+      Route::post('/remove', [CameraGroupController::class, 'removeCamera'])->name('remove');
+    });
   });
 
   // Grup untuk URL /dashboard/ml/*
   Route::prefix('ml')->name('ml.')->group(function () {
-    Route::get('/detection-log', [LogDeteksiMlController::class, 'index'])->name('detection-log.index');
+    Route::get('/detection-log', [LogDeteksiMlController::class, 'index'])->name('ml.detection-log.index');
   });
 
   // Grup untuk URL /dashboard/log/*
   Route::prefix('log')->name('log.')->group(function () {
-    // Rute ini tidak berhubungan dengan riwayat, jadi biarkan saja
     Route::get('/activities', [LogAktifitasController::class, 'index'])->name('activities.index');
-
-    // --- MULAI MODIFIKASI RIWAYAT REKAMAN ---
-
-    // 1. Rute untuk halaman "Pilih Kamera" (URL: /log/history)
-    // Ini tetap sama, hanya mengarah ke controller.
     Route::get('/history', [RiwayatRekamanController::class, 'index'])->name('history.index');
-
-    // 2. Rute Explorer Dinamis yang BARU (Menggantikan 5 rute lama)
-    // URL-nya akan menjadi: /log/history/kamera/{id}/{date?}/{hour?}/{minute?}
     Route::get('/history/kamera/{camera}/{date?}/{hour?}/{minute?}/{chunk?}', [RiwayatRekamanController::class, 'showExplorer'])
       ->name('history.explorer')
       ->where([
         'date'   => '[0-9]{4}-[0-9]{2}-[0-9]{2}',
         'hour'   => '[0-9]{2}',
         'minute' => '[0-9]{2}',
-        'chunk'  => '[0-9]+', // Validasi untuk chunk (harus angka)
+        'chunk'  => '[0-9]+',
       ]);
-
-    // 3. Rute untuk menghapus folder berdasarkan tanggal yang BARU
-    // URL-nya akan menjadi: /log/history/kamera/{id}/hapus-folder
     Route::delete('/history/kamera/{camera}/hapus-folder', [RiwayatRekamanController::class, 'destroyFolder'])
-      ->name('history.destroy.folder'); // Nama baru untuk rute hapus
-
-    // 4. CATATAN: Semua rute lama di dalam `prefix('cameras/{camera}/history')`
-    // sudah tidak diperlukan lagi dan bisa dihapus dengan aman.
-    // Rute-rute seperti `folders`, `folders.data`, `images`, dll.,
-    // semuanya sudah ditangani oleh satu rute 'history.explorer' di atas.
-
-    // --- SELESAI MODIFIKASI ---
+      ->name('history.destroy.folder');
   });
 
   // Grup untuk URL /dashboard/settings/*
@@ -105,10 +108,21 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::resource('users', UserController::class);
   });
 
-  // --- [BARU] Grup untuk semua fitur khusus pengguna ---
+  // Grup untuk semua fitur khusus pengguna (USER BIASA)
   Route::prefix('user')->name('user.')->group(function () {
-    // Route untuk dashboard pengguna
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/groups', [UserDashboardController::class, 'updateGroups'])->name('dashboard.groups');
+
+    // ✅ TAMBAHAN: Routes manajemen grup kamera khusus User
+    // URL: /dashboard/user/camera-groups
+    Route::prefix('camera-groups')->name('camera-groups.')->group(function () {
+        Route::get('/', [CameraGroupController::class, 'index'])->name('index');
+        Route::post('/', [CameraGroupController::class, 'store'])->name('store');
+        Route::put('/{groupName}', [CameraGroupController::class, 'update'])->name('update');
+        Route::delete('/{groupName}', [CameraGroupController::class, 'destroy'])->name('destroy');
+        Route::post('/assign', [CameraGroupController::class, 'assignCamera'])->name('assign');
+        Route::post('/remove', [CameraGroupController::class, 'removeCamera'])->name('remove');
+    });
 
     // Route untuk menautkan kamera
     Route::prefix('cameras')->name('cameras.')->group(function () {
@@ -116,11 +130,11 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
       Route::post('/link', [UserCameraLinkController::class, 'store'])->name('link.store');
     });
 
-    // Route baru untuk manajemen kamera milik pengguna
     Route::get('/my-cameras/data', [UserManajemenKameraController::class, 'getData'])->name('my-cameras.data');
     Route::resource('my-cameras', UserManajemenKameraController::class)->except(['create', 'store', 'show']);
   });
 });
+
 Route::get('/test-reverb', function () {
   return view('test-reverb');
 });
@@ -128,8 +142,8 @@ Route::get('/test-reverb', function () {
 Route::middleware('auth')->group(function () {
   Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
   Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+  Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('password.update');
   Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Route otentikasi dari Laravel Breeze
 require __DIR__ . '/auth.php';

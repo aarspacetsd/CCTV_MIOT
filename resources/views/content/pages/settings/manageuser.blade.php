@@ -84,12 +84,12 @@ resources/views/content/pages/settings/manageuser.blade.php
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Tambah User Baru</h5>
-                <a href="{{ route('users.index') }}" class="btn btn-label-secondary">
+                <a href="{{ route('settings.users.index') }}" class="btn btn-label-secondary">
                     <i class="ti ti-arrow-left me-1"></i> Kembali ke Daftar
                 </a>
             </div>
             <div class="card-body">
-                <form action="{{ route('users.store') }}" method="POST">
+                <form action="{{ route('settings.users.store') }}" method="POST">
                     @csrf
                     <div class="mb-3">
                         <label for="name" class="form-label">Nama</label>
@@ -149,7 +149,7 @@ resources/views/content/pages/settings/manageuser.blade.php
                     </div>
                     <div class="mt-4">
                         <button type="submit" class="btn btn-primary me-2">Simpan User</button>
-                        <a href="{{ route('users.index') }}" class="btn btn-label-secondary">Batal</a>
+                        <a href="{{ route('settings.users.index') }}" class="btn btn-label-secondary">Batal</a>
                     </div>
                 </form>
             </div>
@@ -161,7 +161,7 @@ resources/views/content/pages/settings/manageuser.blade.php
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Edit User: {{ $editingUser->name }}</h5>
-                <a href="{{ route('users.index') }}" class="btn btn-label-secondary">
+                <a href="{{ route('settings.users.index') }}" class="btn btn-label-secondary">
                     <i class="ti ti-arrow-left me-1"></i> Kembali ke Daftar
                 </a>
             </div>
@@ -231,7 +231,7 @@ resources/views/content/pages/settings/manageuser.blade.php
                     </div>
                     <div class="mt-4">
                         <button type="submit" class="btn btn-primary me-2">Update User</button>
-                        <a href="{{ route('users.index') }}" class="btn btn-label-secondary">Batal</a>
+                        <a href="{{ route('settings.users.index') }}" class="btn btn-label-secondary">Batal</a>
                     </div>
                 </form>
             </div>
@@ -242,7 +242,7 @@ resources/views/content/pages/settings/manageuser.blade.php
     @if (!$showCreateForm && !$showEditForm)
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h5 class="mb-0">Daftar User</h5>
-            <a href="{{ route('users.index', ['action' => 'create']) }}" class="btn btn-primary">
+            <a href="{{ route('settings.users.index', ['action' => 'create']) }}" class="btn btn-primary">
                 <i class="ti ti-plus me-1"></i> Tambah User Baru
             </a>
         </div>
@@ -272,12 +272,12 @@ resources/views/content/pages/settings/manageuser.blade.php
                                 </td>
                                 <td>
                                     <div class="d-inline-flex">
-                                        <a href="{{ route('users.index', ['action' => 'edit', 'user_id' => $user->id]) }}"
+                                        <a href="{{ route('settings.users.index', ['action' => 'edit', 'user_id' => $user->id]) }}"
                                             class="btn btn-sm btn-icon btn-info me-2" data-bs-toggle="tooltip"
                                             data-bs-placement="top" title="Edit">
                                             <i class="ti ti-pencil"></i>
                                         </a>
-                                        <form action="{{ route('users.destroy', $user->id) }}" method="POST"
+                                        <form action="{{ route('settings.users.destroy', $user->id) }}" method="POST"
                                             onsubmit="return confirm('Apakah Anda yakin ingin menghapus user ini?')"
                                             class="d-inline">
                                             @csrf

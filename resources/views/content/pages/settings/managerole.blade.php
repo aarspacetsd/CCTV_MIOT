@@ -84,7 +84,7 @@ resources/views/content/admin/roles/manage_roles.blade.php
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Tambah Role Baru</h5>
-                <a href="{{ route('roles.index') }}" class="btn btn-label-secondary">
+                <a href="{{ route('settings.roles.index') }}" class="btn btn-label-secondary">
                     <i class="ti ti-arrow-left me-1"></i> Kembali ke Daftar
                 </a>
             </div>
@@ -117,7 +117,7 @@ resources/views/content/admin/roles/manage_roles.blade.php
                     </div> --}}
                     <div class="mt-4">
                         <button type="submit" class="btn btn-primary me-2">Simpan Role</button>
-                        <a href="{{ route('roles.index') }}" class="btn btn-label-secondary">Batal</a>
+                        <a href="{{ route('settings.roles.index') }}" class="btn btn-label-secondary">Batal</a>
                     </div>
                 </form>
             </div>
@@ -129,7 +129,7 @@ resources/views/content/admin/roles/manage_roles.blade.php
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Edit Role: {{ $editingRole->name }}</h5>
-                <a href="{{ route('roles.index') }}" class="btn btn-label-secondary">
+                <a href="{{ route('settings.roles.index') }}" class="btn btn-label-secondary">
                     <i class="ti ti-arrow-left me-1"></i> Kembali ke Daftar
                 </a>
             </div>
@@ -164,7 +164,7 @@ resources/views/content/admin/roles/manage_roles.blade.php
                     </div> --}}
                     <div class="mt-4">
                         <button type="submit" class="btn btn-primary me-2">Update Role</button>
-                        <a href="{{ route('roles.index') }}" class="btn btn-label-secondary">Batal</a>
+                        <a href="{{ route('settings.roles.index') }}" class="btn btn-label-secondary">Batal</a>
                     </div>
                 </form>
             </div>
@@ -175,7 +175,7 @@ resources/views/content/admin/roles/manage_roles.blade.php
     @if (!$showCreateForm && !$showEditForm)
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h5 class="mb-0">Daftar Role</h5>
-            <a href="{{ route('roles.index', ['action' => 'create']) }}" class="btn btn-primary">
+            <a href="{{ route('settings.roles.index', ['action' => 'create']) }}" class="btn btn-primary">
                 <i class="ti ti-plus me-1"></i> Tambah Role Baru
             </a>
         </div>
@@ -205,12 +205,12 @@ resources/views/content/admin/roles/manage_roles.blade.php
                                 </td> --}}
                                 <td>
                                     <div class="d-inline-flex">
-                                        <a href="{{ route('roles.index', ['action' => 'edit', 'role_id' => $role->id]) }}"
+                                        <a href="{{ route('settings.roles.index', ['action' => 'edit', 'role_id' => $role->id]) }}"
                                             class="btn btn-sm btn-icon btn-info me-2" data-bs-toggle="tooltip"
                                             data-bs-placement="top" title="Edit">
                                             <i class="ti ti-pencil"></i>
                                         </a>
-                                        <form action="{{ route('roles.destroy', $role->id) }}" method="POST"
+                                        <form action="{{ route('settings.roles.destroy', $role->id) }}" method="POST"
                                             class="d-inline"
                                             onsubmit="return confirm('Apakah Anda yakin ingin menghapus role ini? User yang memiliki role ini mungkin akan kehilangan akses.')">
                                             @csrf

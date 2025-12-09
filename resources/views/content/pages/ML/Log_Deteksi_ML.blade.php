@@ -38,7 +38,7 @@
                             </td>
                             <td>
                                 {{-- Tautan ke halaman detail riwayat untuk melihat gambar ukuran penuh --}}
-                                <a href="{{ route('log.history.images', ['camera' => $log->camera_id, 'date' => $log->captured_at->format('Y-m-d')]) }}"
+                                <a href="{{ route('log.history.explorer', ['camera' => $log->camera_id, 'date' => $log->captured_at->format('Y-m-d')]) }}"
                                     class="btn btn-sm btn-outline-secondary">
                                     Lihat Detail
                                 </a>

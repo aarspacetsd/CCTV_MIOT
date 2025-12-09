@@ -4,9 +4,17 @@
       "name": "Dashboard",
       "icon": "menu-icon tf-icons ti ti-smart-home",
       "url": "/dashboard",
-      "slug": "dashboard",
+      "slug": "dashboard-admin",
       "role": [
-        "admin",
+        "admin"
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons ti ti-smart-home",
+      "url": "/dashboard/user/dashboard",
+      "slug": "dashboard-user",
+      "role": [
         "user"
       ]
     },
