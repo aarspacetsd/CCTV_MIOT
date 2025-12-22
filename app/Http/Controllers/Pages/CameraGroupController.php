@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\Camera;
+use App\Models\CameraGroup; // Import model Master Group
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CameraGroupController extends Controller
 {
@@ -16,32 +18,30 @@ class CameraGroupController extends Controller
     {
         $user = Auth::user();
 
-        // Ambil semua grup yang ada (termasuk yang kosong dari session jika perlu)
-        $groups = Camera::where('user_id', $user->id)
-            ->whereNotNull('group_name')
-            ->select('group_name')
-            ->distinct()
-            ->pluck('group_name');
-
-        // Ambil kamera yang belum di-grup
-        $ungroupedCameras = $user->cameras()
-            ->whereNull('group_name')
+        // 1. Ambil semua grup dari tabel master (sinkron dengan data API)
+        // Kita gunakan eager loading 'cameras' agar performa lebih baik
+        $groups = CameraGroup::where('user_id', $user->id)
+            ->with(['cameras'])
             ->get();
 
-        // Ambil semua kamera dengan grupnya
-        $groupedCameras = $user->cameras()
-            ->whereNotNull('group_name')
-            ->get()
-            ->groupBy('group_name');
+        // 2. Ambil kamera yang belum masuk grup (group_id is null)
+        $ungroupedCameras = $user->cameras()
+            ->whereNull('group_id')
+            ->get();
 
-        // Ambil daftar grup kosong dari session (jika ada)
-        $emptyGroups = session('empty_groups', []);
+        // 3. Kelompokkan kamera berdasarkan group_id untuk mempermudah akses di view
+        $groupedCameras = $user->cameras()
+            ->whereNotNull('group_id')
+            ->get()
+            ->groupBy('group_id');
+
+        // Note: Kita tidak lagi membutuhkan session 'empty_groups'
+        // karena grup kosong sekarang tersimpan permanen di database.
 
         return view('CameraGroups', compact(
             'groups',
             'ungroupedCameras',
-            'groupedCameras',
-            'emptyGroups'
+            'groupedCameras'
         ));
     }
 
@@ -52,69 +52,65 @@ class CameraGroupController extends Controller
     {
         $request->validate([
             'group_name' => 'required|string|max:255',
-            'camera_ids' => 'nullable|array', // Opsional: bisa pilih kamera saat buat grup
+            'camera_ids' => 'nullable|array',
             'camera_ids.*' => 'exists:cameras,id',
         ]);
 
-        $groupName = $request->group_name;
+        $user = Auth::user();
 
-        // Cek apakah grup sudah ada
-        $exists = Camera::where('user_id', Auth::id())
-            ->where('group_name', $groupName)
+        // Cek duplikasi nama grup di tabel master
+        $exists = CameraGroup::where('user_id', $user->id)
+            ->where('name', $request->group_name)
             ->exists();
 
         if ($exists) {
             return back()->with('error', 'Grup dengan nama tersebut sudah ada!');
         }
 
-        // Jika ada kamera yang dipilih, assign ke grup baru
-        if ($request->has('camera_ids') && !empty($request->camera_ids)) {
-            Camera::where('user_id', Auth::id())
-                ->whereIn('id', $request->camera_ids)
-                ->update(['group_name' => $groupName]);
+        return DB::transaction(function () use ($request, $user) {
+            // Simpan Grup ke Tabel Master (Logic sinkron dengan API)
+            $group = CameraGroup::create([
+                'user_id' => $user->id,
+                'name' => $request->group_name
+            ]);
 
-            $cameraCount = count($request->camera_ids);
-            return back()->with('success', "Grup \"$groupName\" berhasil dibuat dengan $cameraCount kamera!");
-        }
+            // Jika ada kamera yang dipilih saat pembuatan grup
+            if ($request->has('camera_ids') && !empty($request->camera_ids)) {
+                $user->cameras()
+                    ->whereIn('id', $request->camera_ids)
+                    ->update(['group_id' => $group->id]);
 
-        // Jika tidak ada kamera yang dipilih, simpan nama grup ke session
-        // Tambahkan grup ke daftar grup kosong
-        $emptyGroups = session('empty_groups', []);
-        if (!in_array($groupName, $emptyGroups)) {
-            $emptyGroups[] = $groupName;
-            session(['empty_groups' => $emptyGroups]);
-        }
+                return back()->with('success', "Grup \"{$group->name}\" berhasil dibuat dengan kamera.");
+            }
 
-        return back()->with('info', "Grup \"$groupName\" sudah siap! Silakan tambahkan kamera ke grup ini dari area 'Kamera Tanpa Grup'.");
+            return back()->with('success', "Grup kosong \"{$group->name}\" berhasil dibuat dan tersimpan di database.");
+        });
     }
 
     /**
      * Update nama grup
      */
-    public function update(Request $request, $oldGroupName)
+    public function update(Request $request, $id) // Sekarang menggunakan ID grup, bukan nama lama
     {
         $request->validate([
             'new_group_name' => 'required|string|max:255',
         ]);
 
-        $newGroupName = $request->new_group_name;
+        $group = CameraGroup::where('user_id', Auth::id())->findOrFail($id);
 
-        // Cek apakah nama baru sudah digunakan
-        $exists = Camera::where('user_id', Auth::id())
-            ->where('group_name', $newGroupName)
-            ->where('group_name', '!=', $oldGroupName)
+        // Cek duplikasi nama (kecuali untuk grup ini sendiri)
+        $exists = CameraGroup::where('user_id', Auth::id())
+            ->where('name', $request->new_group_name)
+            ->where('id', '!=', $id)
             ->exists();
 
         if ($exists) {
-            return back()->with('error', 'Nama grup "' . $newGroupName . '" sudah digunakan!');
+            return back()->with('error', 'Nama grup "' . $request->new_group_name . '" sudah digunakan!');
         }
 
-        // Update semua kamera di grup lama ke nama grup baru
-        Camera::where('user_id', Auth::id())
-            ->where('group_name', $oldGroupName)
-            ->update(['group_name' => $newGroupName]);
+        $group->update(['name' => $request->new_group_name]);
 
-        return back()->with('success', 'Nama grup berhasil diubah dari "' . $oldGroupName . '" menjadi "' . $newGroupName . '"');
+        return back()->with('success', 'Nama grup berhasil diubah.');
     }
 
     /**
@@ -124,27 +120,20 @@ class CameraGroupController extends Controller
     {
         $request->validate([
             'camera_id' => 'required|exists:cameras,id',
-            'group_name' => 'required|string|max:255',
+            'group_id' => 'required|exists:camera_groups,id', // Menggunakan ID grup master
         ]);
 
-        $camera = Camera::where('id', $request->camera_id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        $user = Auth::user();
+        $camera = $user->cameras()->findOrFail($request->camera_id);
+        $group = CameraGroup::where('user_id', $user->id)->findOrFail($request->group_id);
 
-        $camera->update(['group_name' => $request->group_name]);
+        $camera->update(['group_id' => $group->id]);
 
-        // Hapus grup dari empty_groups jika ada
-        $emptyGroups = session('empty_groups', []);
-        if (($key = array_search($request->group_name, $emptyGroups)) !== false) {
-            unset($emptyGroups[$key]);
-            session(['empty_groups' => array_values($emptyGroups)]);
-        }
-
-        return back()->with('success', 'Kamera "' . $camera->name . '" berhasil ditambahkan ke grup "' . $request->group_name . '"');
+        return back()->with('success', 'Kamera "' . $camera->name . '" dimasukkan ke grup "' . $group->name . '"');
     }
 
     /**
-     * Pindahkan kamera dari grup
+     * Pindahkan kamera dari grup (Set to Ungrouped)
      */
     public function removeCamera(Request $request)
     {
@@ -152,50 +141,25 @@ class CameraGroupController extends Controller
             'camera_id' => 'required|exists:cameras,id',
         ]);
 
-        $camera = Camera::where('id', $request->camera_id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        $camera = Auth::user()->cameras()->findOrFail($request->camera_id);
+        $camera->update(['group_id' => null]);
 
-        $oldGroup = $camera->group_name;
-        $camera->update(['group_name' => null]);
-
-        // Jika grup menjadi kosong, tambahkan ke empty_groups
-        $remainingCameras = Camera::where('user_id', Auth::id())
-            ->where('group_name', $oldGroup)
-            ->count();
-
-        if ($remainingCameras === 0) {
-            $emptyGroups = session('empty_groups', []);
-            if (!in_array($oldGroup, $emptyGroups)) {
-                $emptyGroups[] = $oldGroup;
-                session(['empty_groups' => $emptyGroups]);
-            }
-        }
-
-        return back()->with('success', 'Kamera "' . $camera->name . '" berhasil dihapus dari grup "' . $oldGroup . '"');
+        return back()->with('success', 'Kamera "' . $camera->name . '" berhasil dikeluarkan dari grup.');
     }
 
     /**
-     * Hapus grup (set semua kamera di grup menjadi ungrouped)
+     * Hapus grup permanen
      */
-    public function destroy($groupName)
+    public function destroy($id)
     {
-        // Hapus dari database
-        $count = Camera::where('user_id', Auth::id())
-            ->where('group_name', $groupName)
-            ->update(['group_name' => null]);
+        $group = CameraGroup::where('user_id', Auth::id())->findOrFail($id);
 
-        // Hapus dari empty groups session
-        $emptyGroups = session('empty_groups', []);
-        if (($key = array_search($groupName, $emptyGroups)) !== false) {
-            unset($emptyGroups[$key]);
-            session(['empty_groups' => array_values($emptyGroups)]);
-        }
+        $name = $group->name;
 
-        if ($count > 0) {
-            return back()->with('success', 'Grup "' . $groupName . '" berhasil dihapus. ' . $count . ' kamera dikembalikan ke status tanpa grup.');
-        } else {
-            return back()->with('success', 'Grup kosong "' . $groupName . '" berhasil dihapus.');
-        }
+        // Hapus record grup.
+        // Berdasarkan migrasi di Canvas, group_id di tabel cameras akan otomatis menjadi NULL (set null).
+        $group->delete();
+
+        return back()->with('success', "Grup \"$name\" berhasil dihapus secara permanen.");
     }
 }

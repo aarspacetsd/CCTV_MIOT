@@ -54,14 +54,32 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [UserCameraApiController::class, 'destroy']); // Unlink Kamera
     });
   // === API GROUPING KAMERA === belum uji
-    Route::prefix('user/camera-groups')->group(function () {
-        Route::get('/', [UserCameraGroupApiController::class, 'index']);           // List Semua Grup & Kamera
-        Route::post('/', [UserCameraGroupApiController::class, 'store']);          // Buat Grup Baru
-        Route::post('/update', [UserCameraGroupApiController::class, 'update']);   // Rename Grup (Pakai POST agar mudah)
-        Route::post('/delete', [UserCameraGroupApiController::class, 'destroy']);  // Hapus Grup (Pakai POST agar mudah)
+  Route::prefix('user/camera-groups')->group(function () {
 
-        Route::post('/assign', [UserCameraGroupApiController::class, 'assignCamera']); // Pindahkan Kamera ke Grup
-        Route::post('/remove', [UserCameraGroupApiController::class, 'removeCamera']); // Hapus Kamera dari Grup
+        // 1. Ambil semua grup (Master) dan kamera ungrouped
+        // GET /api/user/camera-groups
+        Route::get('/', [UserCameraGroupApiController::class, 'index']);
+
+        // 2. Buat grup baru
+        // POST /api/user/camera-groups
+        Route::post('/', [UserCameraGroupApiController::class, 'store']);
+
+        // 3. Perbarui nama grup menggunakan nama lama (tanpa ID grup)
+        // POST /api/user/camera-groups/update
+        Route::post('/update', [UserCameraGroupApiController::class, 'update']);
+
+        // 4. Hapus grup menggunakan nama grup
+        // POST /api/user/camera-groups/delete
+        Route::post('/delete', [UserCameraGroupApiController::class, 'destroy']);
+
+        // 5. Masukkan kamera ke grup berdasarkan Nama Grup
+        // POST /api/user/camera-groups/assign
+        Route::post('/assign', [UserCameraGroupApiController::class, 'assignCamera']);
+
+        // 6. Keluarkan kamera dari grup manapun (Set ke Ungrouped)
+        // POST /api/user/camera-groups/remove
+        Route::post('/remove', [UserCameraGroupApiController::class, 'removeCamera']);
+
     });
 });
   Route::put('/images/{imageRecord}/rename', [ImageHistoryController::class, 'rename']);

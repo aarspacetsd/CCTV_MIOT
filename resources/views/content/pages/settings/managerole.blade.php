@@ -89,7 +89,7 @@ resources/views/content/admin/roles/manage_roles.blade.php
                 </a>
             </div>
             <div class="card-body">
-                <form action="{{ route('roles.store') }}" method="POST">
+                <form action="{{ route('settings.roles.store') }}" method="POST">
                     @csrf
                     <div class="mb-3">
                         <label for="name" class="form-label">Nama Role</label>
@@ -134,7 +134,7 @@ resources/views/content/admin/roles/manage_roles.blade.php
                 </a>
             </div>
             <div class="card-body">
-                <form action="{{ route('roles.update', $editingRole->id) }}" method="POST">
+                <form action="{{ route('settings.roles.update', $editingRole->id) }}" method="POST">
                     @csrf
                     @method('PUT')
 

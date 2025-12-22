@@ -43,7 +43,7 @@ class RoleController extends Controller
         // $rolePermissions = $editingRole->permissions->pluck('name')->toArray(); // Uncomment if managing permissions
       } else {
         // If role not found, redirect back to the list with an error message
-        return redirect()->route('roles.index')->with('error', 'Role to edit not found.');
+        return redirect()->route('settings.roles.index')->with('error', 'Role to edit not found.');
       }
     }
 
@@ -66,7 +66,7 @@ class RoleController extends Controller
    */
   public function create()
   {
-    return redirect()->route('roles.index', ['action' => 'create']);
+    return redirect()->route('settings.roles.index', ['action' => 'create']);
   }
 
   /**
@@ -88,7 +88,7 @@ class RoleController extends Controller
     // If you are managing permissions here:
     // $role->syncPermissions($request->permissions);
 
-    return redirect()->route('roles.index')->with('success', 'Role successfully added.');
+    return redirect()->route('settings.roles.index')->with('success', 'Role successfully added.');
   }
 
   /**
@@ -100,7 +100,7 @@ class RoleController extends Controller
    */
   public function edit(Role $role)
   {
-    return redirect()->route('roles.index', ['action' => 'edit', 'role_id' => $role->id]);
+    return redirect()->route('settings.roles.index', ['action' => 'edit', 'role_id' => $role->id]);
   }
 
   /**
@@ -123,7 +123,7 @@ class RoleController extends Controller
     // If you are managing permissions here:
     // $role->syncPermissions($request->permissions);
 
-    return redirect()->route('roles.index')->with('success', 'Role successfully updated.');
+    return redirect()->route('settings.roles.index')->with('success', 'Role successfully updated.');
   }
 
   /**
@@ -136,10 +136,10 @@ class RoleController extends Controller
   {
     // Prevent deletion of default roles like 'Admin', 'Perawat', 'Dokter' if necessary
     if (in_array($role->name, ['admin', 'Perawat', 'Dokter'])) {
-      return redirect()->route('roles.index')->with('error', 'Default roles cannot be deleted.');
+      return redirect()->route('settings.roles.index')->with('error', 'Default roles cannot be deleted.');
     }
 
     $role->delete();
-    return redirect()->route('roles.index')->with('success', 'Role successfully deleted.');
+    return redirect()->route('settings.roles.index')->with('success', 'Role successfully deleted.');
   }
 }

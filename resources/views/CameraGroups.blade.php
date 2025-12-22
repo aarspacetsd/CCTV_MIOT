@@ -22,14 +22,14 @@
     background: #f8f9fa;
     border-radius: 6px;
     border: 1px solid #dee2e6;
-    max-width: 100%; /* Mencegah badge keluar container */
+    max-width: 100%;
 }
 
 .camera-badge span {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 150px; /* Batas panjang nama di badge */
+    max-width: 150px;
 }
 
 .camera-badge:hover {
@@ -48,10 +48,8 @@
     color: white;
     padding: 15px;
     border-radius: 8px 8px 0 0;
-    /* Flex adjustment handled in inline classes for responsiveness */
 }
 
-/* Helper untuk text truncate yang lebih baik di dalam flex */
 .min-w-0 {
     min-width: 0;
 }
@@ -59,15 +57,7 @@
 @endsection
 
 @section('content')
-{{-- BLOK PESAN SESSION --}}
-@if(session('info'))
-<div class="alert alert-info alert-dismissible fade show" role="alert">
-    <i class="ti ti-info-circle me-2"></i>{{ session('info') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-@endif
-
-{{-- Header Halaman: Responsif flex-column di mobile --}}
+{{-- Header Halaman --}}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
     <div>
         <h4 class="mb-1">
@@ -77,7 +67,7 @@
     </div>
     <div class="align-self-end align-self-md-center">
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">
-            <i class="ti ti-plus me-1"></i> <span class="d-none d-sm-inline">Buat Grup Baru</span><span class="d-inline d-sm-none">Buat</span>
+            <i class="ti ti-plus me-1"></i> <span class="d-none d-sm-inline">Buat Grup Baru</span>
         </button>
     </div>
 </div>
@@ -95,7 +85,6 @@
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 @endif
-{{-- END BLOK PESAN SESSION --}}
 
 {{-- Kamera yang Belum Dikelompokkan --}}
 @if($ungroupedCameras->count() > 0)
@@ -105,7 +94,6 @@
             <i class="ti ti-alert-circle me-2"></i>
             Kamera Tanpa Grup ({{ $ungroupedCameras->count() }})
         </h5>
-        <p class="text-muted mb-3">Kamera di bawah ini belum dimasukkan ke dalam grup manapun</p>
         <div class="d-flex flex-wrap gap-2">
             @foreach($ungroupedCameras as $camera)
             <div class="camera-badge" title="{{ $camera->name }}">
@@ -113,7 +101,6 @@
                 <span>{{ $camera->name }}</span>
                 <button type="button"
                         class="btn btn-sm btn-primary ms-2 flex-shrink-0"
-                        style="padding: 0.1rem 0.4rem;"
                         data-bs-toggle="modal"
                         data-bs-target="#assignCameraModal"
                         data-camera-id="{{ $camera->id }}"
@@ -128,70 +115,17 @@
 @endif
 
 {{-- Daftar Grup --}}
-<div class="row g-4"> {{-- Tambahkan g-4 untuk spacing antar grid --}}
-    {{-- Grup Kosong (jika ada) --}}
-    @if(!empty($emptyGroups))
-        @foreach($emptyGroups as $emptyGroupName)
-        <div class="col-md-6 col-xl-4">
-            <div class="card group-card h-100 border-warning">
-                <div class="group-header-custom d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);">
-                    <div class="min-w-0 me-2">
-                        <h5 class="mb-0 text-white text-truncate" title="{{ $emptyGroupName }}">
-                            <i class="ti ti-folder me-2"></i>{{ $emptyGroupName }}
-                        </h5>
-                        <small class="text-white-50">0 Kamera</small>
-                    </div>
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-light bg-white bg-opacity-25 border-0 text-white" type="button" data-bs-toggle="dropdown">
-                            <i class="ti ti-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="#"
-                                   data-bs-toggle="modal"
-                                   data-bs-target="#editGroupModal"
-                                   data-group-name="{{ $emptyGroupName }}">
-                                    <i class="ti ti-edit me-2"></i>Edit Nama
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item text-danger" href="#"
-                                   onclick="event.preventDefault(); if(confirm('Yakin ingin menghapus grup kosong ini?')) document.getElementById('delete-empty-group-{{ \Illuminate\Support\Str::slug($emptyGroupName) }}').submit();">
-                                    <i class="ti ti-trash me-2"></i>Hapus Grup
-                                </a>
-                                <form id="delete-empty-group-{{ \Illuminate\Support\Str::slug($emptyGroupName) }}"
-                                      action="{{ route('admin.camera-groups.destroy', $emptyGroupName) }}"
-                                      method="POST"
-                                      class="d-none">
-                                    @csrf
-                                    @method('DELETE')
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning mb-0 d-flex align-items-center">
-                        <i class="ti ti-alert-circle me-2 fs-4"></i>
-                        <div class="small">Kosong. Tambahkan kamera dari area atas.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endforeach
-    @endif
-
-    {{-- Grup yang Sudah Ada Kameranya --}}
-    @forelse($groupedCameras as $groupName => $cameras)
+<div class="row g-4">
+    @forelse($groups as $group)
     <div class="col-md-6 col-xl-4">
-        <div class="card group-card h-100">
-            <div class="group-header-custom d-flex justify-content-between align-items-center">
+        <div class="card group-card h-100 {{ $group->cameras->count() === 0 ? 'border-warning' : '' }}">
+            <div class="group-header-custom d-flex justify-content-between align-items-center"
+                 style="{{ $group->cameras->count() === 0 ? 'background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);' : '' }}">
                 <div class="min-w-0 me-2">
-                    <h5 class="mb-0 text-white text-truncate" title="{{ $groupName }}">
-                        <i class="ti ti-folder me-2"></i>{{ $groupName }}
+                    <h5 class="mb-0 text-white text-truncate" title="{{ $group->name }}">
+                        <i class="ti ti-folder me-2"></i>{{ $group->name }}
                     </h5>
-                    <small class="text-white-50">{{ $cameras->count() }} Kamera</small>
+                    <small class="text-white-50">{{ $group->cameras->count() }} Kamera</small>
                 </div>
                 <div class="dropdown flex-shrink-0">
                     <button class="btn btn-sm btn-light bg-white bg-opacity-25 border-0 text-white" type="button" data-bs-toggle="dropdown">
@@ -202,18 +136,19 @@
                             <a class="dropdown-item" href="#"
                                data-bs-toggle="modal"
                                data-bs-target="#editGroupModal"
-                               data-group-name="{{ $groupName }}">
+                               data-group-id="{{ $group->id }}"
+                               data-group-name="{{ $group->name }}">
                                 <i class="ti ti-edit me-2"></i>Edit Nama
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="dropdown-item text-danger" href="#"
-                               onclick="event.preventDefault(); if(confirm('Yakin ingin menghapus grup ini? Semua kamera akan menjadi ungrouped.')) document.getElementById('delete-group-{{ \Illuminate\Support\Str::slug($groupName) }}').submit();">
+                               onclick="event.preventDefault(); if(confirm('Yakin ingin menghapus grup ini?')) document.getElementById('delete-group-{{ $group->id }}').submit();">
                                 <i class="ti ti-trash me-2"></i>Hapus Grup
                             </a>
-                            <form id="delete-group-{{ \Illuminate\Support\Str::slug($groupName) }}"
-                                  action="{{ route('admin.camera-groups.destroy', $groupName) }}"
+                            <form id="delete-group-{{ $group->id }}"
+                                  action="{{ route('admin.camera-groups.destroy', $group->id) }}"
                                   method="POST"
                                   class="d-none">
                                 @csrf
@@ -225,25 +160,16 @@
             </div>
             <div class="card-body">
                 <div class="d-flex flex-column gap-2">
-                    @foreach($cameras as $camera)
-                    {{-- Item Kamera: Menggunakan flex-wrap agar aman di mobile --}}
-                    <div class="d-flex flex-wrap flex-sm-nowrap justify-content-between align-items-center p-2 border rounded gap-2">
-                        {{-- Nama & Icon: Truncate jika panjang --}}
-                        <div class="d-flex align-items-center gap-2 min-w-0" style="flex: 1;">
+                    @forelse($group->cameras as $camera)
+                    <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                        <div class="d-flex align-items-center gap-2 min-w-0">
                             <i class="ti ti-camera text-primary flex-shrink-0"></i>
-                            <span class="text-truncate fw-medium" title="{{ $camera->name }}">
-                                {{ $camera->name }}
-                            </span>
+                            <span class="text-truncate fw-medium" title="{{ $camera->name }}">{{ $camera->name }}</span>
                         </div>
-
-                        {{-- Badge & Tombol: Tidak boleh shrink --}}
-                        <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto ms-sm-0">
-                            <span class="badge {{ $camera->is_active ? 'bg-label-success' : 'bg-label-secondary' }} badge-sm">
-                                {{ $camera->is_active ? 'Aktif' : 'Offline' }}
-                            </span>
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
                             <button type="button"
                                     class="btn btn-icon btn-sm btn-outline-danger"
-                                    onclick="event.preventDefault(); if(confirm('Hapus {{ $camera->name }} dari grup ini?')) document.getElementById('remove-camera-{{ $camera->id }}').submit();">
+                                    onclick="event.preventDefault(); if(confirm('Keluarkan kamera ini?')) document.getElementById('remove-camera-{{ $camera->id }}').submit();">
                                 <i class="ti ti-x"></i>
                             </button>
                             <form id="remove-camera-{{ $camera->id }}"
@@ -255,30 +181,27 @@
                             </form>
                         </div>
                     </div>
-                    @endforeach
+                    @empty
+                    <div class="alert alert-warning mb-0 p-2 small">
+                        <i class="ti ti-alert-circle me-1"></i>Grup ini masih kosong.
+                    </div>
+                    @endforelse
                 </div>
             </div>
         </div>
     </div>
     @empty
-        @if(empty($emptyGroups))
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body text-center py-5">
-                    <div class="mb-3">
-                         <div class="badge bg-label-primary rounded p-3">
-                            <i class="ti ti-folder-off fs-1"></i>
-                         </div>
-                    </div>
-                    <h5 class="mb-1">Belum Ada Grup</h5>
-                    <p class="text-muted mb-4">Buat grup baru untuk mulai mengorganisir kamera Anda</p>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">
-                        <i class="ti ti-plus me-1"></i> Buat Grup Pertama
-                    </button>
-                </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <h5 class="mb-1">Belum Ada Grup</h5>
+                <p class="text-muted mb-4">Buat grup baru untuk mulai mengorganisir kamera Anda</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">
+                    <i class="ti ti-plus me-1"></i> Buat Grup Pertama
+                </button>
             </div>
         </div>
-        @endif
+    </div>
     @endforelse
 </div>
 
@@ -289,59 +212,33 @@
             <form action="{{ route('admin.camera-groups.store') }}" method="POST">
                 @csrf
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="ti ti-folder-plus me-2"></i>Buat Grup Baru
-                    </h5>
+                    <h5 class="modal-title">Buat Grup Baru</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-4">
-                        <label for="group_name" class="form-label">Nama Grup <span class="text-danger">*</span></label>
-                        <input type="text"
-                               class="form-control"
-                               id="group_name"
-                               name="group_name"
-                               placeholder="Contoh: Lantai 1, Area Parkir, dll"
-                               required>
+                        <label class="form-label">Nama Grup <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="group_name" placeholder="Contoh: Lantai 1" required>
                     </div>
-
                     @if($ungroupedCameras->count() > 0)
                     <div class="mb-3">
-                        <label class="form-label d-flex justify-content-between">
-                            <span>Tambahkan Kamera (Opsional)</span>
-                            <span class="badge bg-label-primary">{{ $ungroupedCameras->count() }} Tersedia</span>
-                        </label>
-                        <div class="border rounded p-0" style="max-height: 300px; overflow-y: auto;">
+                        <label class="form-label">Pilih Kamera (Opsional)</label>
+                        <div class="border rounded" style="max-height: 200px; overflow-y: auto;">
                             <div class="list-group list-group-flush">
                                 @foreach($ungroupedCameras as $camera)
-                                <label class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer">
-                                    <input class="form-check-input me-3"
-                                           type="checkbox"
-                                           name="camera_ids[]"
-                                           value="{{ $camera->id }}">
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-medium">{{ $camera->name }}</span>
-                                        <small class="text-muted">
-                                            Status: <span class="{{ $camera->is_active ? 'text-success' : 'text-secondary' }}">{{ $camera->is_active ? 'Online' : 'Offline' }}</span>
-                                        </small>
-                                    </div>
+                                <label class="list-group-item d-flex align-items-center">
+                                    <input class="form-check-input me-3" type="checkbox" name="camera_ids[]" value="{{ $camera->id }}">
+                                    <span>{{ $camera->name }}</span>
                                 </label>
                                 @endforeach
                             </div>
                         </div>
                     </div>
-                    @else
-                    <div class="alert alert-warning d-flex align-items-center mb-0">
-                        <i class="ti ti-info-circle me-2"></i>
-                        <div>Semua kamera sudah memiliki grup. Grup akan dibuat kosong.</div>
-                    </div>
                     @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ti ti-check me-1"></i>Simpan
-                    </button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
                 </div>
             </form>
         </div>
@@ -356,36 +253,18 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="ti ti-edit me-2"></i>Edit Nama Grup
-                    </h5>
+                    <h5 class="modal-title">Edit Nama Grup</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="old_group_name" class="form-label">Nama Grup Saat Ini</label>
-                        <input type="text"
-                               class="form-control"
-                               id="old_group_name"
-                               readonly
-                               disabled
-                               style="background-color: #f5f5f9;">
-                    </div>
-                    <div class="mb-3">
-                        <label for="new_group_name" class="form-label">Nama Grup Baru</label>
-                        <input type="text"
-                               class="form-control"
-                               id="new_group_name"
-                               name="new_group_name"
-                               placeholder="Masukkan nama baru"
-                               required>
+                        <label class="form-label">Nama Grup Baru</label>
+                        <input type="text" class="form-control" id="new_group_name" name="new_group_name" required>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ti ti-device-floppy me-1"></i>Simpan
-                    </button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
                 </div>
             </form>
         </div>
@@ -400,49 +279,27 @@
                 @csrf
                 <input type="hidden" name="camera_id" id="assign_camera_id">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="ti ti-link me-2"></i>Pindahkan Kamera
-                    </h5>
+                    <h5 class="modal-title">Pindahkan Kamera</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="assign_camera_name" class="form-label">Kamera Terpilih</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="ti ti-camera"></i></span>
-                            <input type="text"
-                                   class="form-control"
-                                   id="assign_camera_name"
-                                   readonly
-                                   disabled
-                                   style="background-color: #f5f5f9;">
-                        </div>
+                        <label class="form-label">Kamera Terpilih</label>
+                        <input type="text" class="form-control" id="assign_camera_name" readonly disabled>
                     </div>
                     <div class="mb-3">
-                        <label for="assign_group_name" class="form-label">Pilih Grup Tujuan</label>
-                        <select class="form-select" name="group_name" id="assign_group_name" required>
+                        <label class="form-label">Pilih Grup Tujuan</label>
+                        <select class="form-select" name="group_id" required>
                             <option value="">-- Pilih Grup --</option>
                             @foreach($groups as $group)
-                            <option value="{{ $group }}">{{ $group }}</option>
+                            <option value="{{ $group->id }}">{{ $group->name }}</option>
                             @endforeach
-                            @if(!empty($emptyGroups))
-                            <optgroup label="Grup Kosong">
-                                @foreach($emptyGroups as $emptyGroup)
-                                <option value="{{ $emptyGroup }}">{{ $emptyGroup }} (Kosong)</option>
-                                @endforeach
-                            </optgroup>
-                            @endif
                         </select>
-                        <div class="form-text mt-2">
-                            Grup tidak ada? <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#createGroupModal">Buat baru</a>
-                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ti ti-check me-1"></i>Simpan
-                    </button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
                 </div>
             </form>
         </div>
@@ -452,24 +309,18 @@
 
 @section('page-script')
 <script>
-// Handle Edit Group Modal
 document.getElementById('editGroupModal').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
+    const groupId = button.getAttribute('data-group-id');
     const groupName = button.getAttribute('data-group-name');
 
-    document.getElementById('old_group_name').value = groupName;
     document.getElementById('new_group_name').value = groupName;
-
     const form = document.getElementById('editGroupForm');
 
-    // Generate URL dengan placeholder yang aman untuk menghindari ParseError PHP
-    let updateUrl = "{{ route('admin.camera-groups.update', 'PLACEHOLDER_NAME') }}";
-
-    // Ganti placeholder dengan value sebenarnya menggunakan JavaScript
-    form.action = updateUrl.replace('PLACEHOLDER_NAME', groupName);
+    let updateUrl = "{{ route('admin.camera-groups.update', 'ID_PLACEHOLDER') }}";
+    form.action = updateUrl.replace('ID_PLACEHOLDER', groupId);
 });
 
-// Handle Assign Camera Modal
 document.getElementById('assignCameraModal').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     const cameraId = button.getAttribute('data-camera-id');

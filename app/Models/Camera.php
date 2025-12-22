@@ -22,8 +22,7 @@ class Camera extends Model
     'is_active',
     'websocket_channel_id',
     'last_heartbeat_at',
-    // [PERBAIKAN] Mengaktifkan kolom group_name agar bisa diisi (mass assignable)
-    'group_name',
+    'group_id', // Menggunakan ID dari tabel master camera_groups
   ];
 
   protected $hidden = [
@@ -31,18 +30,14 @@ class Camera extends Model
   ];
 
   /**
-   * Tambahkan properti $casts.
-   * Ini memastikan Laravel selalu memperlakukan kolom ini sebagai objek Carbon (tanggal/waktu),
-   * yang membuat perbandingan waktu lebih andal.
+   * Casts untuk kolom datetime.
    */
   protected $casts = [
     'last_heartbeat_at' => 'datetime',
   ];
 
   /**
-   * ACCESSOR PRODUKSI: Menentukan status aktif kamera secara dinamis.
-   *
-   * @return bool
+   * ACCESSOR: Menentukan status aktif kamera secara dinamis.
    */
   public function getIsActiveAttribute(): bool
   {
@@ -54,20 +49,28 @@ class Camera extends Model
     $lastHeartbeat = $this->last_heartbeat_at;
     $diffInSeconds = abs($now->diffInSeconds($lastHeartbeat));
 
-    Log::info('--- Camera Status Check: ' . $this->name . ' ---');
-    Log::info('Current Time (UTC):     ' . $now->toIso8601String());
-    Log::info('Last Heartbeat (UTC):   ' . $lastHeartbeat->toIso8601String());
-    Log::info('Difference in Seconds (Absolute): ' . $diffInSeconds);
-    Log::info('Is considered active?   ' . ($diffInSeconds < 15 ? 'Yes' : 'No'));
-
     return $diffInSeconds < 15;
   }
 
+  /**
+   * Relasi ke User
+   */
   public function user(): BelongsTo
   {
     return $this->belongsTo(User::class);
   }
 
+  /**
+   * Relasi ke Tabel Master Group
+   */
+  public function group(): BelongsTo
+  {
+    return $this->belongsTo(CameraGroup::class, 'group_id');
+  }
+
+  /**
+   * Relasi ke Image Records
+   */
   public function imageRecords(): HasMany
   {
     return $this->hasMany(ImageRecord::class)->orderBy('captured_at', 'desc');
