@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\UserCameraGroupApiController;
 use App\Http\Controllers\Api\UserCameraApiController;
 
+use App\Http\Controllers\Api\MqttAuthController;
+use App\Http\Controllers\Api\MqttWebhookController;
 
 // Route::get('/user', function (Request $request) {
 //   return $request->user();
@@ -92,3 +94,34 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Endpoint untuk menerima sinyal heartbeat dari perangkat
 Route::post('/heartbeat', HeartbeatController::class);
+// Grouping untuk MQTT
+Route::prefix('mqtt')->group(function () {
+    Route::post('/auth', [MqttAuthController::class, 'auth'])->name('api.mqtt.auth');
+    Route::post('/acl', [MqttAuthController::class, 'acl'])->name('api.mqtt.acl');
+    Route::post('/webhook', [MqttWebhookController::class, 'handle'])->name('api.mqtt.webhook');
+});
+
+/**
+ * PERBAIKAN: Mengembalikan data is_active dan mqtt_status sekaligus
+ */
+Route::get('/camera-statuses', function() {
+    return \App\Models\Camera::all()->mapWithKeys(function ($camera) {
+        return [$camera->id => [
+            'is_active' => $camera->is_active, // Memanggil accessor getIsActiveAttribute
+            'mqtt_status' => $camera->mqtt_status ?? 'offline'
+        ]];
+    });
+});
+
+// Route untuk Force Sync
+Route::get('/mqtt/sync', function(\App\Services\EmqxService $emqx) {
+    try {
+        $emqx->setupAuthentication();
+        $emqx->setupAuthorization();
+        $emqx->setupImageRule();
+        return response()->json(['message' => 'Sync Successful!']);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+

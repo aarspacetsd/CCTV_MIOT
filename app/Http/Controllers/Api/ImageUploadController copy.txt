@@ -4,16 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Camera;
-use App\Models\ImageRecord;
+use App\Models\ImageRecord; // Pastikan model ini di-import
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Validator; // Import Validator
 
 class ImageUploadController extends Controller
 {
     /**
-     * Menerima, menyimpan gambar ke MinIO, dan memperbarui status heartbeat kamera.
+     * Menerima, menyimpan gambar, dan memperbarui status heartbeat kamera.
      */
     public function store(Request $request)
     {
@@ -22,7 +22,7 @@ class ImageUploadController extends Controller
 
         // Validasi input
         $validator = Validator::make($request->all(), [
-            'device_id' => 'required|string|exists:cameras,device_id',
+            'device_id' => 'required|string|exists:cameras,device_id', // Lebih baik 'string' daripada 'uuid' jika tidak pasti
             'api_key'   => 'required|string',
             'image'     => 'required|image|mimes:jpeg,jpg|max:2048', // Maksimal 2MB
         ]);
@@ -36,38 +36,38 @@ class ImageUploadController extends Controller
         // Cari kamera berdasarkan device_id
         $camera = Camera::where('device_id', $request->device_id)->first();
 
-        // Validasi API Key
+        // Validasi API Key (sudah mencakup pengecekan jika kamera ada)
         if (!$camera || !hash_equals($camera->api_key, $request->api_key)) {
             Log::error('Unauthorized access attempt for device_id: ' . $request->device_id);
             return response()->json(['message' => 'Unauthorized: Invalid device_id or api_key.'], 401);
         }
         Log::info('API Key validated successfully for camera: ' . $camera->name);
 
-        // Update timestamp heartbeat
+        // --- LOGIKA UTAMA YANG DIPERBAIKI ---
+        // 1. Perbarui timestamp heartbeat SEKARANG, karena kita menerima data yang valid.
+        // Ini akan secara otomatis membuat status kamera menjadi "Aktif".
         $camera->last_heartbeat_at = now();
         $camera->save();
         Log::info('Heartbeat timestamp updated for camera: ' . $camera->name);
 
-        // Lanjutkan proses penyimpanan file ke MinIO (Disk S3)
+        // 2. Hapus pengecekan 'is_active' yang lama.
+        // Pengecekan tersebut tidak lagi diperlukan karena kita sudah memperbarui heartbeat.
+
+        // 3. Lanjutkan proses penyimpanan file
         try {
             $dateFolder = now()->format('Y-m-d');
             $filename = now()->format('His') . '_' . uniqid() . '.' . $request->file('image')->getClientOriginalExtension();
             $directory = "camera_images/{$camera->device_id}/{$dateFolder}";
 
-            // PENTING: Menggunakan disk 's3' untuk mengarah ke MinIO
-            $path = $request->file('image')->storeAs($directory, $filename, 's3');
+            $path = $request->file('image')->storeAs($directory, $filename, 'public');
 
-            if (!$path) {
-                throw new \Exception("Driver S3 gagal mengembalikan path penyimpanan.");
-            }
-
-            Log::info('SUCCESS: File stored at MinIO path: ' . $path);
+            Log::info('SUCCESS: File stored at path: ' . $path);
         } catch (\Exception $e) {
-            Log::error('!!! MINIO STORAGE FAILED !!!', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'Could not store image to MinIO. ' . $e->getMessage()], 500);
+            Log::error('!!! FILE STORAGE FAILED !!!', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Could not store image.'], 500);
         }
 
-        // Buat record di database
+        // 4. Buat record di database
         try {
             $camera->imageRecords()->create([
                 'path'        => $path,
@@ -76,15 +76,13 @@ class ImageUploadController extends Controller
             Log::info('SUCCESS: Database record created.');
         } catch (\Exception $e) {
             Log::error('!!! DATABASE INSERT FAILED !!!', ['error' => $e->getMessage()]);
-
-            // Hapus file di MinIO jika database gagal mencatat
-            Storage::disk('s3')->delete($path);
-            Log::info('File ' . $path . ' deleted from MinIO due to DB failure.');
-
-            return response()->json(['message' => 'Could not save image record to database.'], 500);
+            // Opsional: Hapus file yang sudah terunggah jika DB gagal
+            Storage::disk('public')->delete($path);
+            Log::info('File ' . $path . ' deleted due to DB failure.');
+            return response()->json(['message' => 'Could not save image record.'], 500);
         }
 
         Log::info('--- [API UPLOAD END] ---');
-        return response()->json(['message' => 'Image uploaded to MinIO successfully'], 201);
+        return response()->json(['message' => 'Image uploaded successfully'], 201);
     }
 }

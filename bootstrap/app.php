@@ -17,7 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(
             at: '*',
         );
-        // atau cukup: $middleware->trustProxies(at: '*');
+
+        // Mematikan proteksi CSRF khusus untuk endpoint MQTT
+        // Agar EMQX bisa melakukan POST ke API Laravel tanpa token
+        $middleware->validateCsrfTokens(except: [
+            'api/mqtt/*',
+        ]);
 
         $middleware->web(LocaleMiddleware::class);
 

@@ -86,11 +86,6 @@
           "url": "/dashboard/log/history",
           "name": "Recording History",
           "slug": "recording-history"
-        },
-        {
-          "url": "/dashboard/log/activities",
-          "name": "Activity Log",
-          "slug": "activity-log"
         }
       ]
     },

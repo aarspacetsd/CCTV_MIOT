@@ -26,7 +26,7 @@
 @section('page-script')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Update Feed Kamera (Polling Gambar)
+        // 1. Update Feed Kamera (Polling Gambar)
         function updateCameraFeed(cameraCard) {
             const imgElement = cameraCard.querySelector('.camera-feed-image');
             const timestampElement = cameraCard.querySelector('.camera-timestamp');
@@ -44,8 +44,46 @@
                 }).catch(e => console.error(e));
         }
 
+        // 2. [BARU] Update Status Kamera & Statistik (Polling Status)
+        function refreshStatuses() {
+            fetch('/api/camera-statuses')
+                .then(response => response.json())
+                .then(data => {
+                    let activeCount = 0;
+
+                    Object.entries(data).forEach(([cameraId, info]) => {
+                        const statusBadge = document.getElementById(`status-badge-${cameraId}`);
+                        const isActive = (typeof info === 'object') ? info.is_active : info;
+
+                        if (isActive) activeCount++;
+
+                        if (statusBadge) {
+                            if (isActive) {
+                                statusBadge.className = 'badge bg-label-success';
+                                statusBadge.textContent = 'Online';
+                            } else {
+                                statusBadge.className = 'badge bg-label-danger';
+                                statusBadge.textContent = 'Offline';
+                            }
+                        }
+                    });
+
+                    // Update angka statistik di bagian atas
+                    const activeCounterEl = document.getElementById('active-camera-counter');
+                    if (activeCounterEl) {
+                        activeCounterEl.textContent = activeCount;
+                    }
+                }).catch(e => console.error('Error refreshing statuses:', e));
+        }
+
         const allCards = document.querySelectorAll('.camera-card');
+
+        // Interval update gambar (5 detik)
         setInterval(() => allCards.forEach(updateCameraFeed), 5000);
+
+        // Interval update status (5 detik)
+        setInterval(refreshStatuses, 5000);
+        refreshStatuses(); // Jalankan sekali saat start
 
         // Filter Auto-submit
         const filter = document.getElementById('groupFilter');
@@ -88,7 +126,8 @@
                     <div class="d-flex align-items-start justify-content-between">
                         <div class="content-left">
                             <span>Kamera Aktif</span>
-                            <h3 class="mb-0 mt-2 text-success">{{ $activeCameras ?? 0 }}</h3>
+                            {{-- Tambahkan ID agar angka ini bisa di-update otomatis --}}
+                            <h3 class="mb-0 mt-2 text-success" id="active-camera-counter">{{ $activeCameras ?? 0 }}</h3>
                         </div>
                         <span class="badge bg-label-success rounded p-2"><i class="ti ti-video ti-sm"></i></span>
                     </div>
@@ -134,11 +173,9 @@
     @endif
 
     @php
-        // Grouping menggunakan relasi 'group' dari model Camera
         $groupedCameras = $cameras->groupBy(function($item) {
             return $item->group ? $item->group->name : 'Tanpa Grup';
         });
-        // Tampilkan header grup hanya jika sedang melihat "Semua Kamera"
         $showHeaders = $currentGroup == 'Semua Kamera';
     @endphp
 
@@ -158,7 +195,9 @@
                             <div class="card h-100 shadow-sm">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">{{ $camera->name }}</h6>
-                                    <span class="badge {{ $camera->is_active ? 'bg-label-success' : 'bg-label-danger' }}">
+                                    {{-- Tambahkan ID pada badge status --}}
+                                    <span class="badge {{ $camera->is_active ? 'bg-label-success' : 'bg-label-danger' }}"
+                                          id="status-badge-{{ $camera->id }}">
                                         {{ $camera->is_active ? 'Online' : 'Offline' }}
                                     </span>
                                 </div>
@@ -189,5 +228,3 @@
         </div>
     @endif
 @endsection
-{{--
- --}}

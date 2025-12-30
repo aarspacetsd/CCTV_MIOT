@@ -32,9 +32,6 @@
                 const copyDeviceBtn = document.getElementById('copyDeviceBtn');
                 const copyApiBtn = document.getElementById('copyApiBtn');
                 const copyWebsocketBtn = document.getElementById('copyWebsocketBtn');
-                const copyMqttUserBtn = document.getElementById('copyMqttUserBtn');
-                const copyMqttPassBtn = document.getElementById('copyMqttPassBtn');
-                const copyMqttBrokerBtn = document.getElementById('copyMqttBrokerBtn');
 
                 if (copyDeviceBtn) {
                     copyDeviceBtn.addEventListener('click', () => copyToClipboard('device_id_input', copyDeviceBtn));
@@ -43,22 +40,14 @@
                     copyApiBtn.addEventListener('click', () => copyToClipboard('api_key_input', copyApiBtn));
                 }
                 if (copyWebsocketBtn) {
-                    copyWebsocketBtn.addEventListener('click', () => copyToClipboard('websocket_id_input', copyWebsocketBtn));
-                }
-                if (copyMqttUserBtn) {
-                    copyMqttUserBtn.addEventListener('click', () => copyToClipboard('mqtt_user_input', copyMqttUserBtn));
-                }
-                if (copyMqttPassBtn) {
-                    copyMqttPassBtn.addEventListener('click', () => copyToClipboard('mqtt_pass_input', copyMqttPassBtn));
-                }
-                if (copyMqttBrokerBtn) {
-                    copyMqttBrokerBtn.addEventListener('click', () => copyToClipboard('mqtt_broker_input', copyMqttBrokerBtn));
+                    copyWebsocketBtn.addEventListener('click', () => copyToClipboard('websocket_id_input',
+                        copyWebsocketBtn));
                 }
             });
         </script>
     @endif
 
-    {{-- PERBAIKAN: Skrip untuk auto-refresh Status Jantung & Status MQTT --}}
+    {{-- [BARU] Skrip untuk auto-refresh status di halaman daftar kamera --}}
     @if (isset($view) && $view == 'index')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -70,16 +59,11 @@
                             }
                             return response.json();
                         })
-                        .then(data => {
-                            // Loop melalui data yang diterima (format: { id: { is_active: bool, mqtt_status: string } })
-                            Object.entries(data).forEach(([cameraId, info]) => {
-
-                                // 1. Update Status Jantung (Aktif/Nonaktif)
+                        .then(statuses => {
+                            for (const cameraId in statuses) {
                                 const statusBadge = document.getElementById(`camera-status-${cameraId}`);
                                 if (statusBadge) {
-                                    // Pastikan kita menangani data baik jika info adalah objek maupun boolean langsung
-                                    const isActive = (typeof info === 'object') ? info.is_active : info;
-
+                                    const isActive = statuses[cameraId];
                                     if (isActive) {
                                         statusBadge.className = 'badge bg-label-success';
                                         statusBadge.textContent = 'Aktif';
@@ -88,30 +72,15 @@
                                         statusBadge.textContent = 'Nonaktif';
                                     }
                                 }
-
-                                // 2. Update Status MQTT (Online/Offline)
-                                const mqttBadge = document.getElementById(`mqtt-status-${cameraId}`);
-                                if (mqttBadge && typeof info === 'object') {
-                                    const isOnline = info.mqtt_status === 'online';
-                                    if (isOnline) {
-                                        mqttBadge.className = 'badge bg-label-success';
-                                        mqttBadge.textContent = 'ONLINE';
-                                    } else {
-                                        mqttBadge.className = 'badge bg-label-danger';
-                                        mqttBadge.textContent = 'OFFLINE';
-                                    }
-                                }
-                            });
+                            }
                         })
                         .catch(error => {
                             console.error('Error fetching camera statuses:', error);
                         });
                 }
 
-                // Jalankan pertama kali saat load
                 checkCameraStatuses();
-                // Periksa status setiap 5 detik agar lebih responsif
-                setInterval(checkCameraStatuses, 5000);
+                setInterval(checkCameraStatuses, 10000); // Periksa status setiap 10 detik
             });
         </script>
     @endif
@@ -136,7 +105,6 @@
                             <th>Nama Kamera</th>
                             <th>Device ID</th>
                             <th>Status</th>
-                            <th>Status MQTT</th>
                             <th>QR Code</th>
                             <th>Aksi</th>
                         </tr>
@@ -145,18 +113,14 @@
                         @forelse($cameras as $camera)
                             <tr>
                                 <td><strong>{{ $camera->name }}</strong></td>
-                                <td><span class="text-muted">{{ \Illuminate\Support\Str::limit($camera->device_id, 13) }}...</span></td>
-                                <td>
-                                    <span class="badge {{ $camera->is_active ? 'badge bg-label-success' : 'badge bg-label-danger' }}"
-                                        id="camera-status-{{ $camera->id }}">
-                                        {{ $camera->is_active ? 'Aktif' : 'Nonaktif' }}
-                                    </span>
+                                <td><span
+                                        class="text-muted">{{ \Illuminate\Support\Str::limit($camera->device_id, 13) }}...</span>
                                 </td>
                                 <td>
-                                    {{-- Menambahkan ID unik agar JavaScript dapat menemukan elemen ini --}}
-                                    <span class="badge {{ $camera->mqtt_status == 'online' ? 'badge bg-label-success' : 'badge bg-label-danger' }}"
-                                        id="mqtt-status-{{ $camera->id }}">
-                                        {{ strtoupper($camera->mqtt_status ?? 'OFFLINE') }}
+                                    {{-- [PERBAIKAN] Menambahkan ID unik untuk setiap badge status --}}
+                                    <span class="badge {{ $camera->is_active ? 'bg-label-success' : 'bg-label-danger' }}"
+                                        id="camera-status-{{ $camera->id }}">
+                                        {{ $camera->is_active ? 'Aktif' : 'Nonaktif' }}
                                     </span>
                                 </td>
                                 <td>
@@ -181,7 +145,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center">Belum ada kamera yang terdaftar.</td>
+                                <td colspan="5" class="text-center">Belum ada kamera yang terdaftar.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -198,6 +162,7 @@
 
     {{-- TAMPILAN FORM TAMBAH KAMERA (CREATE) --}}
     @if (isset($view) && $view == 'create')
+        {{-- Konten form create tidak berubah --}}
         <h4 class="mb-4">Registrasi Perangkat Kamera Baru</h4>
         <div class="row">
             <div class="col-md-12">
@@ -231,6 +196,7 @@
 
     {{-- TAMPILAN FORM EDIT KAMERA (EDIT) --}}
     @if (isset($view) && $view == 'edit')
+        {{-- Konten form edit tidak berubah --}}
         <div class="row">
             <div class="col-md-8">
                 <h4 class="mb-4">Edit Detail Kamera</h4>
@@ -240,11 +206,12 @@
                             <i class="ti ti-circle-check-filled ti-md"></i>
                         </span>
                         <div>
-                            <strong>Kamera berhasil didaftarkan!</strong> Salin informasi di bawah ini untuk perangkat Anda.
+                            <strong>Kamera berhasil didaftarkan!</strong> Salin informasi di bawah ini untuk perangkat
+                            Anda.
                         </div>
                     </div>
                 @endif
-                <div class="card mb-4">
+                <div class="card">
                     <h5 class="card-header">Detail Kamera</h5>
                     <div class="card-body">
                         <form action="{{ route('admin.cameras.update', $camera->id) }}" method="POST">
@@ -264,7 +231,8 @@
                                 <label for="status" class="form-label">Status</label>
                                 <select class="form-select" id="status" name="is_active">
                                     <option value="1" {{ $camera->is_active ? 'selected' : '' }}>Aktif</option>
-                                    <option value="0" {{ !$camera->is_active ? 'selected' : '' }}>Nonaktif</option>
+                                    <option value="0" {{ !$camera->is_active ? 'selected' : '' }}>Nonaktif
+                                    </option>
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary me-2">
@@ -272,41 +240,6 @@
                             </button>
                             <a href="{{ route('admin.cameras.index') }}" class="btn btn-secondary">Kembali</a>
                         </form>
-                    </div>
-                </div>
-
-                {{-- Kartu Kredensial MQTT --}}
-                <div class="card">
-                    <h5 class="card-header">Kredensial MQTT (Gunakan untuk Perangkat)</h5>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label text-primary">Broker Endpoint (.env)</label>
-                            <div class="input-group">
-                                <input type="text" readonly class="form-control" id="mqtt_broker_input"
-                                    value="{{ env('MQTT_BROKER_PROTOCOL', 'mqtt') }}://{{ env('MQTT_BROKER_HOST', 'localhost') }}:{{ env('MQTT_BROKER_PORT', '1883') }}">
-                                <button class="btn btn-outline-primary" type="button" id="copyMqttBrokerBtn"><i class="ti ti-copy ti-xs"></i></button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">MQTT Username</label>
-                                <div class="input-group">
-                                    <input type="text" readonly class="form-control" id="mqtt_user_input" value="{{ $camera->mqtt_username }}">
-                                    <button class="btn btn-outline-secondary" type="button" id="copyMqttUserBtn"><i class="ti ti-copy ti-xs"></i></button>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">MQTT Password (Plain Text)</label>
-                                <div class="input-group">
-                                    <input type="text" readonly class="form-control" id="mqtt_pass_input" value="{{ $camera->mqtt_password }}">
-                                    <button class="btn btn-outline-secondary" type="button" id="copyMqttPassBtn"><i class="ti ti-copy ti-xs"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-light p-3 rounded">
-                            <small class="d-block fw-bold mb-1">Topic Pengiriman Gambar:</small>
-                            <code class="text-dark">iot/camera/{{ $camera->device_id }}/image</code>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -3,75 +3,71 @@
 @section('title', 'Dashboard User')
 
 @section('vendor-style')
-
 <style>
-.group-header {
-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-border-radius: 8px;
-padding: 12px 20px;
-margin-bottom: 16px;
-display: flex;
-justify-content: space-between;
-align-items: center;
-color: white;
-box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
+    .group-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        padding: 12px 20px;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
 
-.group-header h5 {
-    margin: 0;
-    color: white;
-    font-weight: 600;
-}
+    .group-header h5 {
+        margin: 0;
+        color: white;
+        font-weight: 600;
+    }
 
-.group-actions {
-    display: flex;
-    gap: 8px;
-}
+    .group-actions {
+        display: flex;
+        gap: 8px;
+    }
 
-.group-filter-container {
-    background: white;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
+    .group-filter-container {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
 
-.group-filter-label {
-    font-weight: 600;
-    margin-bottom: 8px;
-    display: block;
-}
+    .group-filter-label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: block;
+    }
 
-.camera-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+    .camera-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 
-.camera-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
+    .camera-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
 
-.toggle-icon {
-    transition: transform 0.3s ease;
-}
+    .toggle-icon {
+        transition: transform 0.3s ease;
+    }
 
-.toggle-icon.collapsed {
-    transform: rotate(-90deg);
-}
-
-
+    .toggle-icon.collapsed {
+        transform: rotate(-90deg);
+    }
 </style>
-
 @endsection
 
 @section('page-script')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-// --- Logika untuk update gambar ---
-function updateCameraFeed(cameraCard) {
-const imgElement = cameraCard.querySelector('.camera-feed-image');
-const timestampElement = cameraCard.querySelector('.camera-timestamp');
-const cameraId = imgElement.dataset.cameraId;
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Logika untuk update gambar ---
+        function updateCameraFeed(cameraCard) {
+            const imgElement = cameraCard.querySelector('.camera-feed-image');
+            const timestampElement = cameraCard.querySelector('.camera-timestamp');
+            const cameraId = imgElement.dataset.cameraId;
 
             if (!cameraId) return;
 
@@ -96,7 +92,7 @@ const cameraId = imgElement.dataset.cameraId;
             allCameraCards.forEach(updateCameraFeed);
         }, 5000);
 
-        // --- Polling status kamera setiap 10 detik ---
+        // --- Polling status kamera & Update Statistik ---
         function checkCameraStatuses() {
             fetch('/api/camera-statuses')
                 .then(response => {
@@ -104,10 +100,18 @@ const cameraId = imgElement.dataset.cameraId;
                     return response.json();
                 })
                 .then(statuses => {
+                    let activeCount = 0; // Variabel penampung jumlah kamera aktif
+
                     for (const cameraId in statuses) {
                         const statusBadge = document.getElementById(`camera-status-${cameraId}`);
+                        const info = statuses[cameraId];
+
+                        // Menangani jika data berupa objek atau boolean langsung
+                        const isActive = (typeof info === 'object') ? info.is_active : info;
+
+                        if (isActive) activeCount++; // Tambahkan jika kamera aktif
+
                         if (statusBadge) {
-                            const isActive = statuses[cameraId];
                             if (isActive) {
                                 statusBadge.classList.remove('bg-label-danger');
                                 statusBadge.classList.add('bg-label-success');
@@ -119,12 +123,19 @@ const cameraId = imgElement.dataset.cameraId;
                             }
                         }
                     }
+
+                    // UPDATE STATISTIK: Perbarui angka pada card statistik di atas
+                    const counterEl = document.getElementById('active-camera-counter');
+                    if (counterEl) {
+                        counterEl.textContent = activeCount;
+                    }
                 })
                 .catch(error => console.error('Error fetching camera statuses:', error));
         }
 
+        // Jalankan saat load dan set interval (5 detik untuk responsivitas tinggi)
         checkCameraStatuses();
-        setInterval(checkCameraStatuses, 10000);
+        setInterval(checkCameraStatuses, 5000);
 
         // --- Toggle collapse untuk grup ---
         document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
@@ -143,17 +154,15 @@ const cameraId = imgElement.dataset.cameraId;
         }
     });
 </script>
-
-
 @endsection
 
 @section('content')
 {{-- Header Dashboard --}}
 <div class="d-flex justify-content-between align-items-center mb-4">
-<div>
-<h4 class="mb-1">Dashboard Pemantauan Kamera</h4>
-<p class="mb-0">Selamat datang kembali, <strong>{{ auth()->user()->name ?? 'User' }}</strong>.</p>
-</div>
+    <div>
+        <h4 class="mb-1">Dashboard Pemantauan Kamera</h4>
+        <p class="mb-0">Selamat datang kembali, <strong>{{ auth()->user()->name ?? 'User' }}</strong>.</p>
+    </div>
 
     <div>
         <a href="{{ route('user.camera-groups.index') }}" class="btn btn-outline-primary shadow-sm">
@@ -188,7 +197,8 @@ const cameraId = imgElement.dataset.cameraId;
                     <div class="content-left">
                         <span class="text-muted">Kamera Aktif</span>
                         <div class="d-flex align-items-end mt-2">
-                            <h3 class="mb-0 me-2 text-success">{{ $activeCameras ?? 0 }}</h3>
+                            {{-- Menambahkan ID agar sinkron dengan skrip auto-refresh --}}
+                            <h3 class="mb-0 me-2 text-success" id="active-camera-counter">{{ $activeCameras ?? 0 }}</h3>
                         </div>
                     </div>
                     <span class="badge bg-label-success rounded p-2">
@@ -232,11 +242,9 @@ const cameraId = imgElement.dataset.cameraId;
 </h5>
 
 @php
-    // Perbaikan: Grouping menggunakan relasi 'group' (Master Table)
     $groupedCameras = $cameras->groupBy(function($camera) {
         return $camera->group ? $camera->group->name : 'Tanpa Grup';
     });
-
     $showGroupHeaders = ($currentGroup ?? 'Semua Kamera') == 'Semua Kamera';
 @endphp
 
@@ -314,6 +322,4 @@ const cameraId = imgElement.dataset.cameraId;
         </div>
     </div>
 @endif
-
-
 @endsection

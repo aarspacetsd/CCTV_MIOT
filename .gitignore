@@ -29,6 +29,7 @@
 
 
 
+
 /.phpunit.cache
 /node_modules
 
@@ -65,3 +66,4 @@ yarn-error.log
 !/public/assets/*
 /public/css
 /public/js
+/docker_backup_2025-12-29_03-58-50/*
