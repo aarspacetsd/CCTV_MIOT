@@ -67,3 +67,5 @@ yarn-error.log
 /public/css
 /public/js
 /docker_backup_2025-12-29_03-58-50/*
+storage/app/public/*
+!storage/app/public/.gitignore

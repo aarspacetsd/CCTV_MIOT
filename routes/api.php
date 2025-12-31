@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ImageHistoryController;
 use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\UserCameraGroupApiController;
 use App\Http\Controllers\Api\UserCameraApiController;
+use App\Http\Controllers\Api\EmqxWebSocketController;
 
 use App\Http\Controllers\Api\MqttAuthController;
 use App\Http\Controllers\Api\MqttWebhookController;
@@ -125,3 +126,11 @@ Route::get('/mqtt/sync', function(\App\Services\EmqxService $emqx) {
     }
 });
 
+
+Route::prefix('ws-bridge')->group(function () {
+    // Menerima data sensor (telemetri)
+    Route::post('/telemetry', [EmqxWebSocketController::class, 'handleTelemetry'])->name('api.ws.telemetry');
+
+    // [BARU] Menerima data gambar via WebSocket
+    Route::post('/image', [EmqxWebSocketController::class, 'handleImage'])->name('api.ws.image');
+});

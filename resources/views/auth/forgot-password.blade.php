@@ -23,6 +23,7 @@ $customizerHidden = 'customizer-hide';
 @endsection
 
 @section('content')
+
 <div class="container-xxl">
 <div class="authentication-wrapper authentication-basic container-p-y">
 <div class="authentication-inner py-6">
@@ -33,62 +34,55 @@ $customizerHidden = 'customizer-hide';
 <div class="app-brand justify-content-center mb-6">
 <a href="{{ url('/') }}" class="app-brand-link">
 <span class="app-brand-logo demo">@include('_partials.macros', ['height' => 20, 'withbg' => 'fill: #fff;'])</span>
-<span
-class="app-brand-text demo text-heading fw-bold">{{ config('variables.templateName') }}</span>
+<span class="app-brand-text demo text-heading fw-bold">{{ config('variables.templateName') }}</span>
 </a>
 </div>
 <!-- /Logo -->
 
-                    <h4 class="mb-1">Forgot Password? 🔒</h4>
-                    <p class="mb-6">Enter your email and we'll send you instructions to reset your password</p>
+      <h4 class="mb-1">Forgot Password? 🔒</h4>
+      <p class="mb-6">Enter your email and we'll send you instructions to reset your password</p>
 
-                    {{-- Session Status --}}
-                    @if (session('status'))
-                        <div class="alert alert-success mb-4" role="alert">
-                            {{ session('status') }}
-                        </div>
-                    @endif
+      {{-- Status Sesi (Pesan Sukses) --}}
+      @if (session('status'))
+      <div class="alert alert-success mb-4" role="alert">
+        {{ session('status') }}
+      </div>
+      @endif
 
-                    {{-- Validation Errors --}}
-                    @if ($errors->any())
-                        <div class="alert alert-danger mb-4">
-                            <ul class="mb-0">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
+      {{-- Error Validasi --}}
+      @if ($errors->any())
+      <div class="alert alert-danger mb-4">
+        <ul class="mb-0">
+          @foreach ($errors->all() as $error)
+          <li>{{ $error }}</li>
+          @endforeach
+        </ul>
+      </div>
+      @endif
 
-                    {{-- Forgot Password Form --}}
-                    <form id="formAuthentication" class="mb-4" method="POST" action="{{ route('password.email') }}">
-                        @csrf
-
-                        <div class="mb-6">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="text" class="form-control" id="email" name="email"
-                                value="{{ old('email') }}" placeholder="Enter your email" required
-                                autofocus>
-                        </div>
-
-                        <div class="mb-6">
-                            <button class="btn btn-primary d-grid w-100" type="submit">Send Reset Link</button>
-                        </div>
-                    </form>
-
-                    <div class="text-center">
-                        <a href="{{ route('login') }}" class="d-flex align-items-center justify-content-center">
-                            <i class="ti ti-chevron-left scaleX-n1-rtl"></i>
-                            Back to login
-                        </a>
-                    </div>
-
-                </div>
-            </div>
-            <!-- /Forgot Password Card -->
+      <form id="formAuthentication" class="mb-4" method="POST" action="{{ route('password.email') }}">
+        @csrf
+        <div class="mb-6">
+          <label for="email" class="form-label">Email</label>
+          <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}" placeholder="Enter your email" required autofocus>
         </div>
+        <div class="mb-6">
+          <button class="btn btn-primary d-grid w-100" type="submit">Send Reset Link</button>
+        </div>
+      </form>
+
+      <div class="text-center">
+        <a href="{{ route('login') }}" class="d-flex align-items-center justify-content-center">
+          <i class="ti ti-chevron-left scaleX-n1-rtl"></i>
+          Back to login
+        </a>
+      </div>
     </div>
+  </div>
+  <!-- /Forgot Password Card -->
 </div>
 
 
+</div>
+</div>
 @endsection
