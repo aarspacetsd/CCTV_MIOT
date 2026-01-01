@@ -1,0 +1,148 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProfileApiController; // <-- Import Controller untuk Profile API
+use App\Http\Controllers\Api\ImageUploadController;
+use App\Http\Controllers\Api\LatestImageController;
+use App\Http\Controllers\Api\HeartbeatController; // <-- Tambahkan ini
+use App\Http\Controllers\Api\ImageHistoryController;
+use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\UserCameraGroupApiController;
+use App\Http\Controllers\Api\UserCameraApiController;
+use App\Http\Controllers\Api\EmqxWebSocketController;
+
+use App\Http\Controllers\Api\MqttAuthController;
+use App\Http\Controllers\Api\MqttWebhookController;
+
+// Route::get('/user', function (Request $request) {
+//   return $request->user();
+// })->middleware('auth:sanctum');
+
+// --- Route Otentikasi Publik ---
+//udah jadi
+Route::post('/register', [AuthController::class, 'register']);
+Route::prefix('password')->group(function () {
+    // Langkah 1: Kirim OTP ke email
+    Route::post('/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+        ->middleware('throttle:3,1'); // Maksimal 3 kali minta email per menit
+
+    // Langkah 2: Verifikasi OTP (Tanpa Reset)
+    Route::post('/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])
+        ->middleware('throttle:5,1'); // Maksimal 5 kali coba kode per menit
+
+    // Langkah 3: Eksekusi Reset Password
+    Route::post('/reset', [ForgotPasswordController::class, 'reset']);
+});
+Route::post('/login', [AuthController::class, 'login']);
+// Password Reset API (Langkah 1: Mengirim Email)
+Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail']);
+
+// Password Reset API (Langkah 2: Reset Password)
+Route::post('/password/reset', [ForgotPasswordController::class, 'reset']);
+
+// --- Route Terproteksi (auth:sanctum) ---
+Route::middleware('auth:sanctum')->group(function () {
+
+  // 1. Auth & Logout
+  Route::post('/logout', [AuthController::class, 'logout']);
+
+  // 2. Profile API (Menggunakan ProfileApiController)
+  Route::get('/profile', [ProfileApiController::class, 'show']); // Ambil data profil
+  Route::patch('/profile', [ProfileApiController::class, 'updateProfile']); // Update nama & email
+  Route::put('/password', [ProfileApiController::class, 'updatePassword']); // Update password
+  Route::delete('/profile', [ProfileApiController::class, 'destroy']); // Hapus akun
+  Route::get('/images/{camera}/history', [ImageHistoryController::class, 'historyExplorer']);
+
+  // Endpoint lain (biarkan seperti adanya jika sudah benar)
+// image rename masih error 401
+  Route::put('/images/{imageRecord}/rename', [ImageUploadController::class, 'rename']);
+
+  Route::get('/cameras/{camera}/latest-image', LatestImageController::class);
+// belum di uji api nya untuk user add,manage kamera
+  Route::prefix('user/cameras')->group(function () {
+        Route::get('/', [UserCameraApiController::class, 'index']);      // List Kamera
+        Route::post('/', [UserCameraApiController::class, 'store']);     // Link Kamera Baru
+        Route::get('/{id}', [UserCameraApiController::class, 'show']);   // Detail Kamera
+        Route::put('/{id}', [UserCameraApiController::class, 'update']); // Edit Kamera
+        Route::delete('/{id}', [UserCameraApiController::class, 'destroy']); // Unlink Kamera
+    });
+  // === API GROUPING KAMERA === belum uji
+  Route::prefix('user/camera-groups')->group(function () {
+
+        // 1. Ambil semua grup (Master) dan kamera ungrouped
+        // GET /api/user/camera-groups
+        Route::get('/', [UserCameraGroupApiController::class, 'index']);
+
+        // 2. Buat grup baru
+        // POST /api/user/camera-groups
+        Route::post('/', [UserCameraGroupApiController::class, 'store']);
+
+        // 3. Perbarui nama grup menggunakan nama lama (tanpa ID grup)
+        // POST /api/user/camera-groups/update
+        Route::post('/update', [UserCameraGroupApiController::class, 'update']);
+
+        // 4. Hapus grup menggunakan nama grup
+        // POST /api/user/camera-groups/delete
+        Route::post('/delete', [UserCameraGroupApiController::class, 'destroy']);
+
+        // 5. Masukkan kamera ke grup berdasarkan Nama Grup
+        // POST /api/user/camera-groups/assign
+        Route::post('/assign', [UserCameraGroupApiController::class, 'assignCamera']);
+
+        // 6. Keluarkan kamera dari grup manapun (Set ke Ungrouped)
+        // POST /api/user/camera-groups/remove
+        Route::post('/remove', [UserCameraGroupApiController::class, 'removeCamera']);
+
+    });
+});
+  Route::put('/images/{imageRecord}/rename', [ImageHistoryController::class, 'rename']);
+
+
+// Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+//   return $request->user();
+// }); // <--- Dihapus/Dikomendasikan karena digantikan GET /profile
+  Route::post('/camera/upload', [ImageUploadController::class, 'store']);
+
+// Endpoint untuk menerima sinyal heartbeat dari perangkat
+Route::post('/heartbeat', HeartbeatController::class);
+// Grouping untuk MQTT
+Route::prefix('mqtt')->group(function () {
+    Route::post('/auth', [MqttAuthController::class, 'auth'])->name('api.mqtt.auth');
+    Route::post('/acl', [MqttAuthController::class, 'acl'])->name('api.mqtt.acl');
+    Route::post('/webhook', [MqttWebhookController::class, 'handle'])->name('api.mqtt.webhook');
+});
+
+/**
+ * PERBAIKAN: Mengembalikan data is_active dan mqtt_status sekaligus
+ */
+Route::get('/camera-statuses', function() {
+    return \App\Models\Camera::all()->mapWithKeys(function ($camera) {
+        return [$camera->id => [
+            'is_active' => $camera->is_active, // Memanggil accessor getIsActiveAttribute
+            'mqtt_status' => $camera->mqtt_status ?? 'offline'
+        ]];
+    });
+});
+
+// Route untuk Force Sync
+Route::get('/mqtt/sync', function(\App\Services\EmqxService $emqx) {
+    try {
+        $emqx->setupAuthentication();
+        $emqx->setupAuthorization();
+        $emqx->setupImageRule();
+        return response()->json(['message' => 'Sync Successful!']);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+
+Route::prefix('ws-bridge')->group(function () {
+    // Menerima data sensor (telemetri)
+    Route::post('/telemetry', [EmqxWebSocketController::class, 'handleTelemetry'])->name('api.ws.telemetry');
+
+    // [BARU] Menerima data gambar via WebSocket
+    Route::post('/image', [EmqxWebSocketController::class, 'handleImage'])->name('api.ws.image');
+});
