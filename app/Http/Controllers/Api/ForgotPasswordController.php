@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Mail;
 class ForgotPasswordController extends Controller
 {
     /**
-     * Endpoint API: POST /api/password/email
-     * Menghasilkan 6 digit OTP untuk reset password di Android dan mengirimkannya ke email.
+     * LANGKAH 1: Kirim OTP
+     * Endpoint: POST /api/password/email
      */
     public function sendResetLinkEmail(Request $request)
     {
@@ -27,17 +27,15 @@ class ForgotPasswordController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
-            // Memberikan respon sukses palsu demi keamanan
             return response()->json([
                 'message' => 'Jika email terdaftar, kode OTP telah dikirim.',
             ], 200);
         }
 
-        // --- LOGIKA OTP 6 DIGIT UNTUK ANDROID ---
-        // 1. Generate 6 digit angka acak
+        // Generate 6 digit angka acak
         $otp = (string) random_int(100000, 999999);
 
-        // 2. Simpan OTP ke database (di-hash agar aman)
+        // Simpan OTP ke database
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $request->email],
             [
@@ -47,7 +45,7 @@ class ForgotPasswordController extends Controller
             ]
         );
 
-        // 3. Kirim email berisi kode OTP
+        // Kirim email
         try {
             Mail::raw("Kode OTP untuk reset password Anda adalah: {$otp}. Kode ini berlaku selama 60 menit.", function ($message) use ($user) {
                 $message->to($user->email)
@@ -55,39 +53,76 @@ class ForgotPasswordController extends Controller
             });
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Gagal mengirim email. Silakan hubungi admin.',
+                'message' => 'Gagal mengirim email.',
                 'error' => $e->getMessage()
             ], 500);
         }
 
-        // otp_code telah dihapus dari JSON karena sekarang sudah dikirim via email
         return response()->json([
             'message' => 'Kode OTP telah dikirim ke email Anda.',
         ], 200);
     }
 
     /**
-     * Endpoint API: POST /api/password/reset
-     * Memproses reset password menggunakan OTP 6 digit.
+     * LANGKAH 2: Verifikasi OTP (Tanpa Reset Password)
+     * Endpoint: POST /api/password/verify-otp
+     * Digunakan Android untuk validasi sebelum masuk ke screen ganti password.
+     */
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+            'otp'   => ['required', 'digits:6'],
+        ]);
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
+
+        // Cek apakah record ada dan OTP cocok
+        if (!$record || !Hash::check($request->otp, $record->token)) {
+            return response()->json([
+                'message' => 'Kode OTP tidak valid atau sudah kadaluwarsa.'
+            ], 400);
+        }
+
+        // Cek kadaluwarsa (misal 60 menit)
+        $expires = 60;
+        if (now()->parse($record->created_at)->addMinutes($expires)->isPast()) {
+            return response()->json(['message' => 'Kode OTP sudah kadaluwarsa.'], 400);
+        }
+
+        return response()->json([
+            'message' => 'OTP valid. Silakan lanjutkan ke perubahan password.',
+        ], 200);
+    }
+
+    /**
+     * LANGKAH 3: Ganti Password
+     * Endpoint: POST /api/password/reset
      */
     public function reset(Request $request)
     {
         $request->validate([
-            'token' => ['required', 'digits:6'], // Validasi harus 6 digit angka
+            'otp' => ['required', 'digits:6'], // Diubah dari 'token' menjadi 'otp' sesuai diskusi
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Laravel akan mencocokkan input 'token' (OTP) dengan Hash di database secara otomatis
+        // Karena Laravel Password::reset secara internal mencari field bernama 'token',
+        // kita memetakan 'otp' dari request ke dalam key 'token' agar bisa diproses.
+        $credentials = $request->only('email', 'password', 'password_confirmation');
+        $credentials['token'] = $request->otp;
+
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
+            $credentials,
             function (User $user) use ($request) {
                 $user->forceFill([
                     'password' => Hash::make($request->password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
-                // Hapus semua token akses (Sanctum) agar user harus login ulang di semua perangkat
+                // Hapus semua token akses (Sanctum) agar user harus login ulang
                 $user->tokens()->delete();
             }
         );
@@ -99,8 +134,8 @@ class ForgotPasswordController extends Controller
         }
 
         return response()->json([
-            'message' => 'Gagal meriset password. Kode OTP mungkin salah atau sudah kedaluwarsa.',
-            'errors' => ['token' => [__($status)]]
+            'message' => 'Gagal meriset password. Pastikan kode OTP benar.',
+            'errors' => ['otp' => [__($status)]]
         ], 400);
     }
 }
