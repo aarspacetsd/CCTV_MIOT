@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\MqttWebhookController;
 // --- Route Otentikasi Publik ---
 //udah jadi
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('/login', [AuthController::class, 'login']);
 // Password Reset API (Langkah 1: Mengirim Email)
 Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail']);
