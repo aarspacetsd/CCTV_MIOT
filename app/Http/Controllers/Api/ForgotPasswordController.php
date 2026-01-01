@@ -9,13 +9,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
-use Illuminate\Support\Facades\DB; // Tambahkan import DB
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class ForgotPasswordController extends Controller
 {
     /**
      * Endpoint API: POST /api/password/email
-     * Mengirimkan tautan reset password ke email pengguna (DIUBAH: Mengembalikan token secara langsung).
+     * Menghasilkan 6 digit OTP untuk reset password di Android dan mengirimkannya ke email.
      */
     public function sendResetLinkEmail(Request $request)
     {
@@ -26,47 +27,58 @@ class ForgotPasswordController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
-            // Mengembalikan respons yang aman (tidak memberitahu apakah email terdaftar)
+            // Memberikan respon sukses palsu demi keamanan
             return response()->json([
-                'message' => 'Password reset link sent successfully. Check your email.',
+                'message' => 'Jika email terdaftar, kode OTP telah dikirim.',
             ], 200);
         }
 
-        // --- LOGIKA TANPA EMAIL/SMTP ---
-        // 1. Generate Token Baru
-        $token = Str::random(60);
+        // --- LOGIKA OTP 6 DIGIT UNTUK ANDROID ---
+        // 1. Generate 6 digit angka acak
+        $otp = (string) random_int(100000, 999999);
 
-        // 2. Simpan Token ke database `password_reset_tokens`
-        // Pastikan Anda memiliki tabel password_reset_tokens (dibuat oleh migration Laravel)
+        // 2. Simpan OTP ke database (di-hash agar aman)
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $request->email],
             [
                 'email' => $request->email,
-                'token' => Hash::make($token), // Hash token di DB (default Laravel)
+                'token' => Hash::make($otp),
                 'created_at' => now()
             ]
         );
-        // ---------------------------------
 
+        // 3. Kirim email berisi kode OTP
+        try {
+            Mail::raw("Kode OTP untuk reset password Anda adalah: {$otp}. Kode ini berlaku selama 60 menit.", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Kode OTP Reset Password - CCTV MIOT');
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mengirim email. Silakan hubungi admin.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        // otp_code telah dihapus dari JSON karena sekarang sudah dikirim via email
         return response()->json([
-            'message' => 'Password reset token generated.',
-            'reset_token' => $token // MENGEMBALIKAN TOKEN DI SINI (Untuk Debugging/Pengujian Tanpa SMTP)
+            'message' => 'Kode OTP telah dikirim ke email Anda.',
         ], 200);
     }
 
     /**
      * Endpoint API: POST /api/password/reset
-     * Memproses reset password menggunakan token dan kredensial baru.
+     * Memproses reset password menggunakan OTP 6 digit.
      */
     public function reset(Request $request)
     {
         $request->validate([
-            'token' => ['required'],
+            'token' => ['required', 'digits:6'], // Validasi harus 6 digit angka
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Memproses reset password menggunakan token
+        // Laravel akan mencocokkan input 'token' (OTP) dengan Hash di database secara otomatis
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user) use ($request) {
@@ -75,21 +87,20 @@ class ForgotPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
-                // Opsional: Hapus semua token Sanctum lama agar user harus login ulang
+                // Hapus semua token akses (Sanctum) agar user harus login ulang di semua perangkat
                 $user->tokens()->delete();
             }
         );
 
         if ($status == Password::PASSWORD_RESET) {
             return response()->json([
-                'message' => 'Password has been reset successfully. Please log in.',
+                'message' => 'Password berhasil diubah. Silakan login kembali.',
             ], 200);
         }
 
-        // Jika gagal (misalnya token tidak valid atau kedaluwarsa)
         return response()->json([
-            'message' => 'Password reset failed.',
-            'errors' => ['email' => [__($status)]]
+            'message' => 'Gagal meriset password. Kode OTP mungkin salah atau sudah kedaluwarsa.',
+            'errors' => ['token' => [__($status)]]
         ], 400);
     }
 }
