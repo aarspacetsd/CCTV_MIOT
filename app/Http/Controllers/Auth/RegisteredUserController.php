@@ -11,12 +11,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
-use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
 {
   /**
-   * Display the registration view.
+   * Tampilkan halaman registrasi.
    */
   public function create(): View
   {
@@ -24,9 +23,7 @@ class RegisteredUserController extends Controller
   }
 
   /**
-   * Handle an incoming registration request.
-   *
-   * @throws \Illuminate\Validation\ValidationException
+   * Tangani permintaan registrasi yang masuk.
    */
   public function store(Request $request): RedirectResponse
   {
@@ -42,13 +39,15 @@ class RegisteredUserController extends Controller
       'password' => Hash::make($request->password),
     ]);
 
-    // 👇 Assign role user
     $user->assignRole('user');
 
+    // Memicu event Registered yang akan mengirimkan email verifikasi
     event(new Registered($user));
 
+    // Login otomatis setelah registrasi
     Auth::login($user);
 
-    return redirect(route('dashboard.index', absolute: false));
+    // Diubah: Arahkan ke halaman prompt verifikasi email, bukan langsung ke dashboard
+    return redirect()->route('verification.notice');
   }
 }
