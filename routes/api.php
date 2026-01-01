@@ -23,7 +23,9 @@ use App\Http\Controllers\Api\MqttWebhookController;
 
 // --- 1. Rute Otentikasi Publik ---
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/register/verify', [AuthController::class, 'verifyOtp']); // Verifikasi OTP Registrasi
+// PERBAIKAN: Disamakan dengan endpoint yang dipanggil Android/Python Simulation
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // --- 2. Alur Lupa Password (3 Langkah) ---
