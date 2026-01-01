@@ -3,37 +3,35 @@
 namespace App\Http\Controllers\Pages\Setting;
 
 use App\Http\Controllers\Controller;
-use App\Models\User; // Pastikan model User sudah ada
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role; // Import model Role dari Spatie
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
   public function __construct()
   {
-    // Hanya Admin yang bisa mengakses semua metode di controller ini
+    // Memastikan hanya Admin yang bisa mengakses fitur manajemen user ini
     $this->middleware(['auth', 'role:admin']);
   }
 
   /**
-   * Menampilkan daftar semua user dan/atau form tambah/edit berdasarkan query parameter.
-   *
-   * @param  \Illuminate\Http\Request  $request
-   * @return \Illuminate\Http\Response
+   * Menampilkan daftar user dan form (Create/Edit) berdasarkan query parameter.
    */
   public function index(Request $request)
   {
-    $users = User::with('roles')->latest()->get(); // Selalu ambil daftar user
-    $roles = Role::all(); // Selalu ambil semua role untuk form
+    $users = User::with('roles')->latest()->get();
+    $roles = Role::all();
 
     $showCreateForm = false;
     $showEditForm = false;
     $editingUser = null;
     $userRoles = [];
 
-    // Cek query parameter 'action'
+    // Logika UI: Menampilkan form berdasarkan parameter URL (?action=create atau ?action=edit)
     if ($request->query('action') === 'create') {
       $showCreateForm = true;
     } elseif ($request->query('action') === 'edit' && $request->query('user_id')) {
@@ -42,38 +40,18 @@ class UserController extends Controller
         $showEditForm = true;
         $userRoles = $editingUser->roles->pluck('name')->toArray();
       } else {
-        // Jika user tidak ditemukan, redirect kembali ke daftar dengan pesan error
-        return redirect()->route('users.index')->with('error', 'User yang ingin diedit tidak ditemukan.');
+        // Diperbaiki: Menggunakan route name yang benar (settings.users.index)
+        return redirect()->route('settings.users.index')->with('error', 'User tidak ditemukan.');
       }
     }
 
-    // Kirim semua data yang mungkin dibutuhkan ke view
     return view('content.pages.settings.manageuser', compact(
-      'users',
-      'roles',
-      'showCreateForm',
-      'showEditForm',
-      'editingUser',
-      'userRoles'
+      'users', 'roles', 'showCreateForm', 'showEditForm', 'editingUser', 'userRoles'
     ));
   }
 
   /**
-   * Mengarahkan ke halaman index dengan flag untuk menampilkan form tambah.
-   * Ini akan dipanggil oleh tombol "Tambah User Baru".
-   *
-   * @return \Illuminate\Http\Response
-   */
-  public function create()
-  {
-    return redirect()->route('users.index', ['action' => 'create']);
-  }
-
-  /**
-   * Menyimpan user baru ke database.
-   *
-   * @param  \Illuminate\Http\Request  $request
-   * @return \Illuminate\Http\Response
+   * Menyimpan user baru (Input manual oleh Admin).
    */
   public function store(Request $request)
   {
@@ -81,49 +59,32 @@ class UserController extends Controller
       'name' => 'required|string|max:255',
       'email' => 'required|string|email|max:255|unique:users',
       'password' => 'required|string|min:8|confirmed',
-      'roles' => 'required|string|exists:roles,name', // Diubah dari array ke string
+      'roles' => 'required|string|exists:roles,name',
     ]);
 
     $user = User::create([
       'name' => $request->name,
       'email' => $request->email,
       'password' => Hash::make($request->password),
+      'email_verified_at' => now(), // Admin menambahkan user secara manual, otomatis terverifikasi
     ]);
 
-    // Menggunakan assignRole untuk satu role
     $user->assignRole($request->roles);
 
-    return redirect()->route('users.index')->with('success', 'User berhasil ditambahkan.');
+    // Diperbaiki: Menggunakan route name yang benar (settings.users.index)
+    return redirect()->route('settings.users.index')->with('success', 'User berhasil ditambahkan.');
   }
 
   /**
-   * Mengarahkan ke halaman index dengan flag untuk menampilkan form edit.
-   * Ini akan dipanggil oleh tombol "Edit" di tabel.
-   *
-   * @param  \App\Models\User  $user
-   * @return \Illuminate\Http\Response
+   * Memperbarui data user.
    */
-  public function edit(User $user)
-  {
-    return redirect()->route('users.index', ['action' => 'edit', 'user_id' => $user->id]);
-  }
-
-  /**
-   * Memperbarui user yang ada di database.
-   *
-   * @param  \Illuminate\Http\Request  $request
-   * @param  \App\Models\User  $user
-   * @return \Illuminate\Http\Response
-   */
-  // app/Http/Controllers/Pages/Setting/UserController.php
-
   public function update(Request $request, User $user)
   {
     $request->validate([
       'name' => 'required|string|max:255',
       'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
       'password' => 'nullable|string|min:8|confirmed',
-      'roles' => 'required|string|exists:roles,name', // Diubah dari array ke string
+      'roles' => 'required|string|exists:roles,name',
     ]);
 
     $user->name = $request->name;
@@ -132,23 +93,31 @@ class UserController extends Controller
     if ($request->filled('password')) {
       $user->password = Hash::make($request->password);
     }
-    $user->save();
 
-    // syncRoles bisa menangani string untuk satu role atau array untuk banyak role
+    $user->save();
     $user->syncRoles($request->roles);
 
-    return redirect()->route('users.index')->with('success', 'User berhasil diperbarui.');
+    // Diperbaiki: Menggunakan route name yang benar (settings.users.index)
+    return redirect()->route('settings.users.index')->with('success', 'User berhasil diperbarui.');
   }
 
   /**
-   * Menghapus user dari database.
-   *
-   * @param  \App\Models\User  $user
-   * @return \Illuminate\Http\Response
+   * Menghapus user dengan pengamanan ekstra.
    */
   public function destroy(User $user)
   {
-    $user->delete();
-    return redirect()->route('users.index')->with('success', 'User berhasil dihapus.');
+    // 1. Keamanan: Mencegah Admin menghapus akunnya sendiri yang sedang digunakan
+    if ($user->id === Auth::id()) {
+      return redirect()->route('settings.users.index')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+    }
+
+    // 2. Keamanan Database: Menggunakan try-catch untuk menangani Foreign Key Constraint
+    try {
+        $user->delete();
+        return redirect()->route('settings.users.index')->with('success', 'User berhasil dihapus.');
+    } catch (\Exception $e) {
+        // Jika user masih punya data kamera/record yang terhubung (Integrity Violation)
+        return redirect()->route('settings.users.index')->with('error', 'Gagal menghapus user. Silakan hapus data kamera atau relasi terkait terlebih dahulu.');
+    }
   }
 }
