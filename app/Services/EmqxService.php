@@ -80,6 +80,10 @@ class EmqxService
     protected function setupAuthentication()
     {
         $url = "{$this->baseUrl}/authentication";
+
+        // Deteksi apakah menggunakan HTTPS
+        $isHttps = str_starts_with($this->callbackBaseUrl, 'https');
+
         $payload = [
             'backend' => 'http',
             'mechanism' => 'password_based',
@@ -87,7 +91,12 @@ class EmqxService
             'url' => "{$this->callbackBaseUrl}/api/mqtt/auth",
             'headers' => ['content-type' => 'application/json'],
             'body' => ['username' => '${username}', 'password' => '${password}'],
-            'enable' => true
+            'enable' => true,
+            // PERBAIKAN: Tambahkan blok SSL jika menggunakan HTTPS
+            'ssl' => [
+                'enable' => $isHttps,
+                'verify' => 'verify_none' // Gunakan ini jika sertifikat SSL Anda self-signed/Cloudflare
+            ]
         ];
 
         $res = $this->post($url, $payload);
@@ -97,19 +106,23 @@ class EmqxService
         return $res->successful() || $res->status() == 409;
     }
 
-    // ==========================================
-    // 2. AUTHORIZATION (ACL)
-    // ==========================================
     protected function setupAuthorization()
     {
         $url = "{$this->baseUrl}/authorization/sources";
+        $isHttps = str_starts_with($this->callbackBaseUrl, 'https');
+
         $payload = [
             'type' => 'http',
             'enable' => true,
             'method' => 'post',
             'url' => "{$this->callbackBaseUrl}/api/mqtt/acl",
             'headers' => ['content-type' => 'application/json'],
-            'body' => ['username' => '${username}', 'topic' => '${topic}', 'action' => '${action}']
+            'body' => ['username' => '${username}', 'topic' => '${topic}', 'action' => '${action}'],
+            // PERBAIKAN: Tambahkan blok SSL jika menggunakan HTTPS
+            'ssl' => [
+                'enable' => $isHttps,
+                'verify' => 'verify_none'
+            ]
         ];
 
         $res = $this->post($url, $payload);
@@ -118,7 +131,6 @@ class EmqxService
         }
         return true;
     }
-
     // ==========================================
     // 3. CONNECTOR
     // ==========================================
