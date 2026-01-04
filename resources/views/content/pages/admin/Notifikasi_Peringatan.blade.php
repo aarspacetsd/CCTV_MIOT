@@ -167,7 +167,7 @@
                         </div>
                         <div class="list-group-item border-0 text-center py-4">
                             {{-- PERBAIKAN: Update nama rute sesuai konfigurasi baru Anda --}}
-                            <p class="text-muted small mb-0">Lihat selengkapnya di <a href="{{ route('ml.ml.detection-log.index') }}" class="text-primary fw-bold">Log Deteksi</a></p>
+                            <p class="text-muted small mb-0">Lihat selengkapnya di <a href="{{ route('ml.detection-log.index') }}" class="text-primary fw-bold">Log Deteksi</a></p>
                         </div>
                     </div>
                 </div>

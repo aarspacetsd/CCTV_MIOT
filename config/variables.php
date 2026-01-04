@@ -2,8 +2,8 @@
 // Variables
 return [
   "creatorName" => "Ahmad Akmal Rijal",
-  "creatorUrl" => "https://aarspace.com",
-  "templateName" => "SMC V1",
+  "creatorUrl" => "https://ahmadakmal.com",
+  "templateName" => "MiotVision",
   "templateSuffix" => "Bootstrap Admin Template",
   "templateVersion" => "2.0.0",
   "templateFree" => false,
@@ -25,5 +25,6 @@ return [
   "twitterUrl" => "",
   "githubUrl" => "",
   "dribbbleUrl" => "",
-  "instagramUrl" => ""
+  "instagramUrl" => "",
+  "logoUrl" => "assets/img/favicon/icon_cctv_miot.png",
 ];

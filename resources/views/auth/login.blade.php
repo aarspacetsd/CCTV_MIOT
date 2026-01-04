@@ -86,13 +86,16 @@
                 <div class="card">
                     <div class="card-body">
                         <!-- Logo -->
-                        <div class="app-brand justify-content-center mb-6">
-                            <a href="{{ url('/') }}" class="app-brand-link">
-                                <span class="app-brand-logo demo">@include('_partials.macros', ['height' => 20, 'withbg' => 'fill: #fff;'])</span>
-                                <span
-                                    class="app-brand-text demo text-heading fw-bold">{{ config('variables.templateName') }}</span>
-                            </a>
-                        </div>
+                       <div class="app-brand justify-content-center mb-6">
+    <a href="{{ url('/') }}" class="app-brand-link">
+        <span class="app-brand-logo demo">
+            <img src="{{ asset(config('variables.logoUrl')) }}" height="20" alt="Logo">
+        </span>
+        <span class="app-brand-text demo text-heading fw-bold">
+            {{ config('variables.templateName') }}
+        </span>
+    </a>
+</div>
                         <!-- /Logo -->
 
                         <h4 class="mb-1">Welcome to {{ config('variables.templateName') }}! 👋</h4>

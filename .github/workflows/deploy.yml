@@ -1,14 +1,39 @@
-# .github/workflows/deploy.yml
-name: Trigger Portainer Redeploy
+name: Deploy to Server
 
 on:
   push:
     branches:
-      - main # Atur branch pemicu di sini
+      - main # Workflow akan jalan setiap push ke branch main
 
 jobs:
-  redeploy:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Trigger Portainer Redeploy Webhook
-        run: curl -X POST ${{ secrets.PORTAINER_WEBHOOK_URL }}
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            # Masuk ke direktori aplikasi
+            cd /var/www/html # Ganti dengan path aplikasi Anda di server
+
+            # Ambil update terbaru dari GitHub
+            # Ini tidak akan menimpa .env karena .env biasanya di-ignore oleh git
+            git pull origin main
+
+            # Jika menggunakan Docker, build ulang image yang berubah
+            # File .env lokal di server akan otomatis dibaca oleh docker-compose
+            docker-compose up -d --build
+
+            # Jalankan perintah Laravel di dalam container
+            docker-compose exec -T app php artisan migrate --force
+            docker-compose exec -T app php artisan optimize:clear
+
+            echo "Deployment Berhasil!"
