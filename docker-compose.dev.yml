@@ -12,18 +12,20 @@ volumes:
   emqx_log:
   minio_data:
   storage_data:
+  vendor_data:
+  build_data:
 
 services:
   app:
     build:
       context: .
-      dockerfile: ./docker/php/Dockerfile
+      dockerfile: Dockerfile        # ← pakai Dockerfile root (multi-stage dengan Vite)
+      target: app                   # ← pakai stage "app" (production stage)
     container_name: laravel_CCTV_app_dev
     restart: unless-stopped
     working_dir: /app
     ports:
-      - "8080:8080"     # Laravel Reverb (WebSocket)
-      - "5173:5173"     # Vite Dev Server
+      - "8080:8080"                 # Laravel Reverb (WebSocket)
     environment:
       <<: *default-env
       APP_ENV: local
@@ -35,28 +37,10 @@ services:
       VITE_REVERB_PORT: "8080"
       VITE_REVERB_SCHEME: "http"
     volumes:
-      - ./:/app                   # mount source code
-      - /app/vendor               # exclude vendor (pakai hasil Docker build)
-      - /app/public/build         # exclude public/build (pakai hasil Docker build)
-      - /app/node_modules         # exclude node_modules
-      - storage_data:/app/storage # persistent storage
-    networks:
-      - laravel_net
-
-  web:
-    image: nginx:alpine
-    container_name: laravel_CCTV_web_dev
-    restart: unless-stopped
-    depends_on:
-      - app
-    ports:
-      - "8084:80"
-    volumes:
-      - ./:/app:ro
-      - /app/public/build         # exclude, pakai dari volume app
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    environment:
-      <<: *default-env
+      - ./:/app                     # mount source code
+      - vendor_data:/app/vendor     # persist vendor dari Docker build
+      - build_data:/app/public/build # persist public/build dari Docker build
+      - storage_data:/app/storage   # persistent storage
     networks:
       - laravel_net
 
