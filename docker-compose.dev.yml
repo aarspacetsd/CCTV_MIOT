@@ -1,5 +1,4 @@
-# version: "3.9"
-
+# docker-compose.dev.yml
 x-env: &default-env
   TZ: "Asia/Jakarta"
 
@@ -12,6 +11,7 @@ volumes:
   emqx_data:
   emqx_log:
   minio_data:
+  storage_data:
 
 services:
   app:
@@ -20,36 +20,40 @@ services:
       dockerfile: ./docker/php/Dockerfile
     container_name: laravel_CCTV_app_dev
     restart: unless-stopped
-    working_dir: /var/www/html
-    # TAMBAHKAN PORTS DI APP UNTUK WEBSOCKET & VITE
+    working_dir: /app
     ports:
-      - "8080:8080"     # Port Laravel Reverb (WebSocket)
-      - "5173:5173"     # Port Vite (Development Server)
+      - "8080:8080"     # Laravel Reverb (WebSocket)
+      - "5173:5173"     # Vite Dev Server
     environment:
       <<: *default-env
       APP_ENV: local
       APP_DEBUG: "true"
       PHP_OPCACHE_ENABLE: "0"
-      # Tambahkan env ini agar server WebSocket mau menerima koneksi dari luar container
       REVERB_HOST: "0.0.0.0"
-      VITE_REVERB_HOST: "localhost" # Browser anda akan mencari ke localhost
+      REVERB_PORT: "8080"
+      VITE_REVERB_HOST: "localhost"
       VITE_REVERB_PORT: "8080"
       VITE_REVERB_SCHEME: "http"
     volumes:
-      - ./:/var/www/html
+      - ./:/app                   # mount source code
+      - /app/vendor               # exclude vendor (pakai hasil Docker build)
+      - /app/public/build         # exclude public/build (pakai hasil Docker build)
+      - /app/node_modules         # exclude node_modules
+      - storage_data:/app/storage # persistent storage
     networks:
       - laravel_net
 
   web:
     image: nginx:alpine
-    container_name: laravel_web_dev
+    container_name: laravel_CCTV_web_dev
     restart: unless-stopped
     depends_on:
       - app
     ports:
       - "8084:80"
     volumes:
-      - ./:/var/www/html:ro
+      - ./:/app:ro
+      - /app/public/build         # exclude, pakai dari volume app
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     environment:
       <<: *default-env
@@ -93,7 +97,7 @@ services:
 
   emqx:
     image: emqx/emqx:latest
-    container_name: laravel_emqx_dev
+    container_name: laravel_CCTV_emqx_dev
     restart: unless-stopped
     environment:
       <<: *default-env
@@ -115,12 +119,12 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: laravel-minio-dev
+    container_name: laravel_CCTV_minio_dev
     restart: unless-stopped
     environment:
+      <<: *default-env
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
-      TZ: Asia/Jakarta
     volumes:
       - minio_data:/data
     ports:
