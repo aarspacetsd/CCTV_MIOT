@@ -1,0 +1,11 @@
+touch storage/framework/sessions/.gitkeep
+touch storage/framework/views/.gitkeep
+touch storage/framework/cache/data/.gitkeep
+touch storage/logs/.gitkeep
+touch storage/app/public/.gitignore
+```
+
+Isi `storage/app/public/.gitignore`:
+```
+*
+!.gitignore
