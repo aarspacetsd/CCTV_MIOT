@@ -185,6 +185,9 @@ class EmqxService
         $this->createAction("action_laravel_ws_telemetry", "/api/ws-bridge/telemetry", $connector);
         $this->createAction("action_laravel_ws_image", "/api/ws-bridge/image", $connector);
 
+        // Pendaftaran Action untuk Status Realtime
+        $this->createAction("action_laravel_ws_status", "/api/ws-bridge/status", $connector);
+
         Log::info("EMQX_ACTIONS_SETUP: Prosedur pendaftaran Action selesai.");
     }
 
@@ -229,6 +232,9 @@ class EmqxService
         $this->createRule("rule_mqtt_image", 'SELECT * FROM "iot/camera/+/image"', ["http:action_laravel_mqtt_image"]);
         $this->createRule("rule_ws_telemetry", 'SELECT * FROM "ws/camera/+/telemetry"', ["http:action_laravel_ws_telemetry"]);
         $this->createRule("rule_ws_image", 'SELECT * FROM "ws/camera/+/image"', ["http:action_laravel_ws_image"]);
+
+        // Pendaftaran Rule untuk Status Realtime
+        $this->createRule("rule_ws_status", 'SELECT * FROM "ws/camera/+/status"', ["http:action_laravel_ws_status"]);
 
         Log::info("EMQX_RULES_SETUP: Prosedur pendaftaran Rule selesai.");
     }

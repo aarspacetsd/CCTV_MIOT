@@ -131,6 +131,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('password.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::patch('/profile/retention', [ProfileController::class, 'updateRetention'])->name('profile.update-retention');
 });
 
 // Rute Utilitas/Testing (Tanpa Verified mungkin diperlukan)

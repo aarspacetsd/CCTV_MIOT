@@ -18,163 +18,255 @@ class EmqxService
         $this->apiKey = env('EMQX_API_KEY');
         $this->apiSecret = env('EMQX_API_SECRET');
 
-        // Menggunakan IP Host yang sudah diverifikasi (10.8.124.228)
-        $this->callbackBaseUrl = env('EMQX_CALLBACK_URL', 'http://10.8.124.228:8084');
+        // Deteksi URL Callback secara dinamis
+        $host = request()->getHost();
+        $scheme = request()->getScheme();
+        $port = request()->getPort() ?: 8084;
+
+        /**
+         * PERBAIKAN LOGIKA URL:
+         * Jika diakses via browser dengan IP/Domain (bukan localhost), gunakan itu.
+         * Jika terdeteksi localhost tapi ada EMQX_CALLBACK_URL di .env, prioritaskan .env.
+         * Ini penting agar EMQX (terutama jika di Docker) bisa memanggil balik ke IP Host.
+         */
+        if ($host && $host !== 'localhost' && $host !== '127.0.0.1') {
+            $this->callbackBaseUrl = "{$scheme}://{$host}:{$port}";
+        } else {
+            // Ambil dari .env, jika tidak ada baru fallback ke localhost
+            $this->callbackBaseUrl = env('EMQX_CALLBACK_URL', "http://localhost:{$port}");
+        }
+
+        $this->callbackBaseUrl = rtrim($this->callbackBaseUrl, '/');
     }
 
     /**
-     * Sinkronisasi total semua konfigurasi ke EMQX.
-     * Digunakan untuk otomasi agar tidak perlu akses URL sync manual.
+     * Sinkronisasi total dengan urutan logika yang ketat:
+     * 1. Auth -> 2. Authorization -> 3. Connector -> 4. Action -> 5. Rules
      */
     public function syncAll()
     {
         try {
+            Log::info("EMQX_SYNC_STARTED: Menggunakan Callback -> " . $this->callbackBaseUrl);
+
+            // 1. SETUP AUTHENTICATION
             $this->setupAuthentication();
+
+            // 2. SETUP AUTHORIZATION (ACL)
             $this->setupAuthorization();
-            $this->setupImageRule();
-            Log::info("EMQX: Full synchronization completed successfully.");
+
+            // 3. SETUP CONNECTOR (WAJIB: Harus sukses sebelum lanjut ke Action)
+            $connectorSuccess = $this->setupConnector();
+            if (!$connectorSuccess) {
+                throw new \Exception("Gagal menyiapkan Connector HTTP. EMQX tidak dapat menjangkau URL Laravel Anda.");
+            }
+
+            // 4. SETUP ACTIONS
+            $this->setupAllActions();
+
+            // 5. SETUP RULES
+            $this->setupAllRules();
+
+            Log::info("EMQX_SYNC_COMPLETE: Seluruh infrastruktur berhasil dikonfigurasi.");
             return true;
         } catch (\Exception $e) {
-            Log::error("EMQX: Full synchronization failed: " . $e->getMessage());
-            return false;
+            Log::error("EMQX_SYNC_FAILED: " . $e->getMessage());
+            throw $e;
         }
     }
 
-    /**
-     * Helper untuk mendapatkan URL callback yang benar
-     */
-    protected function getUrl($path)
-    {
-        return rtrim($this->callbackBaseUrl, '/') . $path;
-    }
-
-    /**
-     * Setup Autentikasi (Password-based HTTP)
-     */
-    public function setupAuthentication()
+    // ==========================================
+    // 1. AUTHENTICATION
+    // ==========================================
+    protected function setupAuthentication()
     {
         $url = "{$this->baseUrl}/authentication";
-        $response = $this->get($url);
 
-        if ($response->successful()) {
-            $exists = collect($response->json())->contains(fn($item) => ($item['backend'] ?? '') === 'http');
-            if (!$exists) {
-                $this->post($url, [
-                    'mechanism' => 'password_based',
-                    'backend' => 'http',
-                    'method' => 'post',
-                    'url' => $this->getUrl('/api/mqtt/auth'),
-                    'headers' => [
-                        'content-type' => 'application/json',
-                        'accept' => 'application/json'
-                    ],
-                    'body' => [
-                        'username' => '${username}',
-                        'password' => '${password}'
-                    ],
-                    'enable' => true
-                ]);
-                Log::info("EMQX: Auth HTTP created.");
-            }
+        // Deteksi apakah menggunakan HTTPS
+        $isHttps = str_starts_with($this->callbackBaseUrl, 'https');
+
+        $payload = [
+            'backend' => 'http',
+            'mechanism' => 'password_based',
+            'method' => 'post',
+            'url' => "{$this->callbackBaseUrl}/api/mqtt/auth",
+            'headers' => ['content-type' => 'application/json'],
+            'body' => ['username' => '${username}', 'password' => '${password}'],
+            'enable' => true,
+            // PERBAIKAN: Tambahkan blok SSL jika menggunakan HTTPS
+            'ssl' => [
+                'enable' => $isHttps,
+                'verify' => 'verify_none' // Gunakan ini jika sertifikat SSL Anda self-signed/Cloudflare
+            ]
+        ];
+
+        $res = $this->post($url, $payload);
+        if ($res->failed() && $res->status() !== 409) {
+            Log::error("EMQX_AUTH_SETUP_ERROR: " . $res->body());
         }
+        return $res->successful() || $res->status() == 409;
     }
 
-    /**
-     * Setup Authorization (ACL HTTP)
-     */
-    public function setupAuthorization()
+    protected function setupAuthorization()
     {
         $url = "{$this->baseUrl}/authorization/sources";
-        $response = $this->get($url);
+        $isHttps = str_starts_with($this->callbackBaseUrl, 'https');
 
-        if ($response->successful()) {
-            $exists = collect($response->json())->contains(fn($item) => ($item['type'] ?? '') === 'http');
-            if (!$exists) {
-                $this->post($url, [
-                    'type' => 'http',
-                    'method' => 'post',
-                    'url' => $this->getUrl('/api/mqtt/acl'),
-                    'headers' => [
-                        'content-type' => 'application/json',
-                        'accept' => 'application/json'
-                    ],
-                    'body' => [
-                        'username' => '${username}',
-                        'topic' => '${topic}',
-                        'action' => '${action}'
-                    ],
-                    'enable' => true
-                ]);
-                Log::info("EMQX: Authz HTTP created.");
-            }
-        }
-    }
-
-    /**
-     * Setup Konektor, Aksi, dan Rule (Alur Data Gambar)
-     * URUTAN: Connector -> Action -> Rule
-     */
-    public function setupImageRule()
-    {
-        $connectorName = "conn_laravel_http";
-        $actionName = "action_laravel_webhook";
-        $ruleId = "rule_capture_images";
-
-        // 1. Buat Connector (Koneksi Fisik ke Host)
-        $this->post("{$this->baseUrl}/connectors", [
+        $payload = [
             'type' => 'http',
-            'name' => $connectorName,
+            'enable' => true,
+            'method' => 'post',
+            'url' => "{$this->callbackBaseUrl}/api/mqtt/acl",
+            'headers' => ['content-type' => 'application/json'],
+            'body' => ['username' => '${username}', 'topic' => '${topic}', 'action' => '${action}'],
+            // PERBAIKAN: Tambahkan blok SSL jika menggunakan HTTPS
+            'ssl' => [
+                'enable' => $isHttps,
+                'verify' => 'verify_none'
+            ]
+        ];
+
+        $res = $this->post($url, $payload);
+        if ($res->failed()) {
+            $this->put("{$url}/http", $payload);
+        }
+        return true;
+    }
+    // ==========================================
+    // 3. CONNECTOR
+    // ==========================================
+    protected function setupConnector()
+    {
+        $id = "http:conn_laravel_http";
+        $url = "{$this->baseUrl}/connectors";
+
+        /**
+         * PERBAIKAN PAYLOAD CONNECTOR:
+         * 1. Ganti 'base_url' menjadi 'url' (Standar EMQX v5).
+         * 2. Pindahkan timeout ke root level payload.
+         */
+        $payload = [
+            'type' => 'http',
+            'name' => 'conn_laravel_http',
             'url' => $this->callbackBaseUrl,
             'headers' => [
                 'content-type' => 'application/json',
                 'accept' => 'application/json'
             ],
-            'resource_opts' => [
-                'health_check_interval' => '15s'
-            ],
-            'enable' => true
-        ]);
+            'enable' => true,
+            'connect_timeout' => '5s'
+        ];
 
-        // 2. Buat Action (Operasi Webhook menggunakan Connector)
-        $this->post("{$this->baseUrl}/actions", [
+        $check = $this->get("{$url}/{$id}");
+
+        if ($check->successful()) {
+            Log::info("EMQX_CONNECTOR: Mengupdate connector yang sudah ada.");
+            $res = $this->put("{$url}/{$id}", $payload);
+        } else {
+            Log::info("EMQX_CONNECTOR: Membuat connector baru.");
+            $res = $this->post($url, $payload);
+        }
+
+        if ($res->failed()) {
+            Log::error("EMQX_CONNECTOR_ERROR: " . $res->body());
+            return false;
+        }
+
+        return true;
+    }
+
+    // ==========================================
+    // 4. ACTIONS
+    // ==========================================
+    protected function setupAllActions()
+    {
+        $connector = "conn_laravel_http";
+
+        $this->createAction("action_laravel_mqtt_image", "/api/mqtt/webhook", $connector);
+        $this->createAction("action_laravel_ws_telemetry", "/api/ws-bridge/telemetry", $connector);
+        $this->createAction("action_laravel_ws_image", "/api/ws-bridge/image", $connector);
+
+        Log::info("EMQX_ACTIONS_SETUP: Prosedur pendaftaran Action selesai.");
+    }
+
+    protected function createAction($name, $path, $connector)
+    {
+        $url = "{$this->baseUrl}/actions";
+        $payload = [
             'type' => 'http',
-            'name' => $actionName,
-            'connector' => $connectorName,
+            'name' => $name,
+            'connector' => $connector,
             'parameters' => [
-                'path' => '/api/mqtt/webhook',
+                'path' => $path,
                 'method' => 'post',
-                'headers' => [
-                    'content-type' => 'application/json'
-                ],
+                'headers' => ['content-type' => 'application/json', 'accept' => 'application/json'],
                 'body' => json_encode([
                     'action' => 'message_publish',
                     'topic' => '${topic}',
                     'payload' => '${payload}',
                     'username' => '${username}'
-                ]),
-                'max_retries' => 3
+                ])
             ],
             'enable' => true
-        ]);
+        ];
 
-        // 3. Buat Rule (Trigger SQL)
-        $ruleCheck = $this->get("{$this->baseUrl}/rules/{$ruleId}");
-        if ($ruleCheck->failed()) {
-            $this->post("{$this->baseUrl}/rules", [
-                'id' => $ruleId,
-                'sql' => 'SELECT * FROM "iot/camera/+/image"',
-                'actions' => ["http:{$actionName}"],
-                'enable' => true
-            ]);
-            Log::info("EMQX: Rule capture images created.");
+        $res = $this->post($url, $payload);
+        if ($res->status() == 409 || ($res->failed() && str_contains($res->body(), 'already_exists'))) {
+            $res = $this->put("{$url}/http:{$name}", $payload);
         }
+
+        if ($res->failed()) {
+            Log::error("EMQX_ACTION_ERROR [{$name}]: " . $res->body());
+        }
+
+        return $res;
+    }
+
+    // ==========================================
+    // 5. RULES
+    // ==========================================
+    protected function setupAllRules()
+    {
+        $this->createRule("rule_mqtt_image", 'SELECT * FROM "iot/camera/+/image"', ["http:action_laravel_mqtt_image"]);
+        $this->createRule("rule_ws_telemetry", 'SELECT * FROM "ws/camera/+/telemetry"', ["http:action_laravel_ws_telemetry"]);
+        $this->createRule("rule_ws_image", 'SELECT * FROM "ws/camera/+/image"', ["http:action_laravel_ws_image"]);
+
+        Log::info("EMQX_RULES_SETUP: Prosedur pendaftaran Rule selesai.");
+    }
+
+    protected function createRule($id, $sql, $actions)
+    {
+        $url = "{$this->baseUrl}/rules";
+        $payload = [
+            'id' => $id,
+            'sql' => $sql,
+            'actions' => $actions,
+            'enable' => true
+        ];
+
+        $res = $this->post($url, $payload);
+        if ($res->status() == 409 || ($res->failed() && str_contains($res->body(), 'already_exists'))) {
+            $res = $this->put("{$url}/{$id}", $payload);
+        }
+
+        if ($res->failed()) {
+            Log::error("EMQX_RULE_ERROR [{$id}]: " . $res->body());
+        }
+
+        return $res;
+    }
+
+    // ==========================================
+    // HTTP HELPERS
+    // ==========================================
+    protected function post($url, $data) {
+        return Http::withBasicAuth($this->apiKey, $this->apiSecret)->post($url, $data);
+    }
+
+    protected function put($url, $data) {
+        return Http::withBasicAuth($this->apiKey, $this->apiSecret)->put($url, $data);
     }
 
     protected function get($url) {
         return Http::withBasicAuth($this->apiKey, $this->apiSecret)->get($url);
-    }
-
-    protected function post($url, $data) {
-        return Http::withBasicAuth($this->apiKey, $this->apiSecret)->post($url, $data);
     }
 }

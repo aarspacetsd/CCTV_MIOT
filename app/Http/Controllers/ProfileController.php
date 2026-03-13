@@ -82,4 +82,17 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    public function updateRetention(Request $request): RedirectResponse
+{
+    $request->validate([
+        'retention_days' => ['required', 'integer', 'min:1', 'max:365'],
+    ]);
+
+    $request->user()->update([
+        'retention_days' => $request->retention_days,
+    ]);
+
+    return Redirect::route('profile.edit')->with('status', 'retention-updated');
+}
 }

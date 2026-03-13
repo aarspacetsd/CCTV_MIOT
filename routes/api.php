@@ -95,6 +95,7 @@ Route::prefix('mqtt')->group(function () {
 Route::prefix('ws-bridge')->group(function () {
     Route::post('/telemetry', [EmqxWebSocketController::class, 'handleTelemetry'])->name('api.ws.telemetry');
     Route::post('/image', [EmqxWebSocketController::class, 'handleImage'])->name('api.ws.image');
+    Route::post('/status', [EmqxWebSocketController::class, 'handleStatus'])->name('api.ws.status');
 });
 
 // Status & Sync Utils

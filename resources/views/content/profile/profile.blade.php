@@ -30,18 +30,18 @@
 
     <div class="row">
         <div class="col-lg-12">
-            {{-- Notifikasi Umum (Misalnya dari Auth Session setelah update berhasil) --}}
-            @if (session('status') === 'profile-updated' || session('status') === 'password-updated')
+            {{-- Notifikasi Umum --}}
+            @if (session('status') === 'profile-updated' || session('status') === 'password-updated' || session('status') === 'retention-updated')
                 <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
                     class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                    <i class="ti ti-check me-2"></i> {{ __('Tersimpan.') }}
+                    <i class="ti ti-check me-2"></i> {{ session('status') === 'retention-updated' ? __('Pengaturan penyimpanan berhasil diperbarui.') : __('Tersimpan.') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
             <div class="space-y-6">
 
-                {{-- 1. INFORMASI PROFIL (PATCH: profile.update) --}}
+                {{-- 1. INFORMASI PROFIL --}}
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">{{ __('Informasi Profil') }}</h5>
@@ -50,17 +50,14 @@
 
                     <div class="card-body">
                         <section>
-                            {{-- Form untuk mengirim ulang verifikasi email (hidden) --}}
                             <form id="send-verification" method="post" action="{{ route('verification.send') }}">
                                 @csrf
                             </form>
 
-                            {{-- Form Update Profil. ACTION menunjuk ke route profile.update --}}
                             <form method="post" action="{{ route('profile.update') }}" class="row g-3">
                                 @csrf
                                 @method('patch')
 
-                                {{-- Input Nama --}}
                                 <div class="col-12 col-md-6">
                                     <label for="name" class="form-label">{{ __('Nama') }}</label>
                                     <input type="text" id="name" name="name"
@@ -71,7 +68,6 @@
                                     @enderror
                                 </div>
 
-                                {{-- Input Email --}}
                                 <div class="col-12 col-md-6">
                                     <label for="email" class="form-label">{{ __('Email') }}</label>
                                     <input type="email" id="email" name="email"
@@ -112,8 +108,7 @@
                     </div>
                 </div>
 
-
-                {{-- 2. FORMULIR GANTI PASSWORD (PUT: password.update) --}}
+                {{-- 2. FORMULIR GANTI PASSWORD --}}
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">{{ __('Perbarui Kata Sandi') }}</h5>
@@ -121,12 +116,10 @@
                     </div>
                     <div class="card-body">
                         <section>
-                            {{-- Action menunjuk ke route password.update --}}
                             <form method="post" action="{{ route('password.update') }}" class="row g-3">
                                 @csrf
                                 @method('put')
 
-                                {{-- Kata Sandi Saat Ini --}}
                                 <div class="col-12 col-md-4">
                                     <label for="update_password_current_password" class="form-label">{{ __('Kata Sandi Saat Ini') }}</label>
                                     <div class="input-group input-group-merge">
@@ -141,7 +134,6 @@
                                     @enderror
                                 </div>
 
-                                {{-- Kata Sandi Baru --}}
                                 <div class="col-12 col-md-4">
                                     <label for="update_password_password" class="form-label">{{ __('Kata Sandi Baru') }}</label>
                                     <div class="input-group input-group-merge">
@@ -156,7 +148,6 @@
                                     @enderror
                                 </div>
 
-                                {{-- Konfirmasi Kata Sandi --}}
                                 <div class="col-12 col-md-4">
                                     <label for="update_password_password_confirmation" class="form-label">{{ __('Konfirmasi Kata Sandi') }}</label>
                                     <div class="input-group input-group-merge">
@@ -181,8 +172,48 @@
                     </div>
                 </div>
 
-                {{-- 3. FORMULIR HAPUS AKUN (DELETE: profile.destroy) --}}
-                <div class="card mb-4 border border-2 border-danger"> {{-- Tambahkan border merah untuk highlight --}}
+                {{-- 3. [BARU] PENGATURAN RETENSI PENYIMPANAN --}}
+                <div class="card mb-4 border-start border-primary border-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ __('Pengaturan Penyimpanan Kamera') }}</h5>
+                        <small class="text-muted">{{ __('Tentukan berapa lama gambar CCTV Anda akan disimpan sebelum dihapus secara otomatis.') }}</small>
+                    </div>
+                    <div class="card-body">
+                        <section>
+                            <form method="post" action="{{ route('profile.update-retention') }}" class="row g-3">
+                                @csrf
+                                @method('patch')
+
+                                <div class="col-12 col-md-6">
+                                    <label for="retention_days" class="form-label">{{ __('Batas Penyimpanan Gambar (Hari)') }}</label>
+                                    <div class="input-group">
+                                        <input type="number" id="retention_days" name="retention_days"
+                                            class="form-control @error('retention_days') is-invalid @enderror"
+                                            value="{{ old('retention_days', $user->retention_days ?? 30) }}"
+                                            min="1" max="365" required />
+                                        <span class="input-group-text">{{ __('Hari') }}</span>
+                                        @error('retention_days')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <p class="mt-2 mb-0 small text-muted">
+                                        <i class="ti ti-info-circle me-1"></i>
+                                        {{ __('Gambar yang lebih tua dari durasi ini akan dihapus permanen dari storage setiap hari pada pukul 00:00.') }}
+                                    </p>
+                                </div>
+
+                                <div class="col-12 pt-4 border-top">
+                                    <button type="submit" class="btn btn-primary me-2">
+                                        {{ __('Simpan Pengaturan Penyimpanan') }}
+                                    </button>
+                                </div>
+                            </form>
+                        </section>
+                    </div>
+                </div>
+
+                {{-- 4. FORMULIR HAPUS AKUN --}}
+                <div class="card mb-4 border border-2 border-danger">
                     <div class="card-header">
                         <h5 class="mb-0 text-danger">{{ __('Hapus Akun') }}</h5>
                         <small class="text-muted">{{ __('Setelah akun Anda dihapus, semua sumber daya dan data akan dihapus secara permanen. Harap unduh data apa pun yang ingin Anda simpan sebelum melanjutkan.') }}</small>
@@ -204,7 +235,6 @@
         @if ($errors->userDeletion->isNotEmpty()) style="display: block;" @endif>
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                {{-- Action menunjuk ke route profile.destroy --}}
                 <form method="post" action="{{ route('profile.destroy') }}">
                     @csrf
                     @method('delete')
@@ -243,13 +273,11 @@
         </div>
     </div>
 
-    {{-- Tambahkan script ini agar modal delete muncul otomatis jika ada error validasi --}}
     @if ($errors->userDeletion->isNotEmpty())
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 var deleteModal = new bootstrap.Modal(document.getElementById('confirmUserDeletionModal'));
                 deleteModal.show();
-                // Opsional: Fokuskan input password di modal
                 document.getElementById('password_delete').focus();
             });
         </script>
